@@ -312,7 +312,7 @@ pub fn fmt_bitboard_display<B: Bitboard>(b: &B, f: &mut std::fmt::Formatter<'_>)
 
 
 pub fn fmt_bitboard_debug<B: Bitboard>(b: &B, storage_bits:usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-	let total = (b.width() * b.height()) as usize;
+	let total = b.width() as usize * b.height() as usize;
 	//let storage_bits = std::mem::size_of_val(&b.storage()) * 8;
 
 	let mut bits = Vec::new();
@@ -354,55 +354,3 @@ pub fn fmt_bitboard_debug<B: Bitboard>(b: &B, storage_bits:usize, f: &mut std::f
 
 	write!(f, ")")
 }
-
-/*
-pub trait Sliding
-where
-	Self::BB: IntegerBitboard + Clone,
-	<Self::BB as Bitboard>::Storage: IntegerStorage,
-{
-	type BB: IntegerBitboard + Clone;
-
-	fn mask(square: u8) -> Self::BB;
-	fn attacks(square: u8, blockers: &Self::BB) -> Self::BB;
-}
-
-
-pub struct SlidingTable<BB: IntegerBitboard+Clone>
-where
-	BB::Storage: BitStorage,
-	<BB as Bitboard>::Storage: IntegerStorage,
-{
-	pub mask: Vec<BB>,
-	pub attacks: Vec<Vec<BB>>,
-}
-
-pub fn generate_sliding_table<S: Sliding>(board_size: usize) -> SlidingTable<S::BB>
-where
-	S: Sliding,
-	S::BB: StaticIntegerBitboard + Clone,
-	<S::BB as Bitboard>::Storage: IntegerStorage,
-{
-	
-	let mut table = SlidingTable {
-		mask: vec![S::BB::empty(); board_size],
-		attacks: vec![Vec::new(); board_size],
-	};
-
-	for sq in 0..board_size {
-		let mask = S::mask(sq as u8);
-		let subsets = mask.all_subsets();
-		let mut atk_table = vec![S::BB::empty(); 1 << mask.count()];
-
-		for subset in subsets {
-			let idx = subset.pext(&mask);
-			atk_table[idx.to_usize()] = S::attacks(sq as u8, &subset);
-		}
-
-		table.mask[sq] = mask;
-		table.attacks[sq] = atk_table;
-	}
-
-	table
-}
-*/

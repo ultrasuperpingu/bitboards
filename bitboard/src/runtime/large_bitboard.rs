@@ -127,7 +127,7 @@ impl RuntimeBitboard for LargeBitboard {
 			row.bits[0]=1;
 			row <<= w;
 			row -= 1;
-			row <<= y * w;
+			row <<= (y as usize) * (w as usize);
 			row
 		}
 	}
@@ -137,7 +137,7 @@ impl RuntimeBitboard for LargeBitboard {
 			col.bits[0]=1;
 			col <<= h;
 			col -= 1;
-			col <<= x * h;
+			col <<= (x as usize) * (h as usize);
 			col
 		} else {
 			Self::west_border(w,h,col_major) << x

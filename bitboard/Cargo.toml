@@ -60,3 +60,20 @@ bitboard_proc_macro = {path="../bitboard_proc_macro"}
 [[bench]]
 name = "sliding_attacks"
 harness = false
+
+
+[[example]]
+name = "small_bitboard"
+path = "examples/small_bitboard.rs"
+
+[[example]]
+name = "bitboard5x20"
+path = "examples/bitboard5x20.rs"
+
+[[example]]
+name = "bitboard8x8"
+path = "examples/bitboard8x8.rs"
+
+[[example]]
+name = "bitboard12x11"
+path = "examples/bitboard12x11.rs"
