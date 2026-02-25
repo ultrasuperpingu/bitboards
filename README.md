@@ -1,15 +1,17 @@
+![License](https://img.shields.io/badge/license-LGPL-blue)
+
 # bitboards
 
 2D bitboards in Rust.
 
-`bitboards` is a Rust library providing generic, compile-time generated 2D bitboards with efficient bitwise operations and optional CPU intrinsics (BMI2 when available).
+`bitboards` is a Rust library providing generic, compile-time 2D bitboards via a procedural macro with efficient bitwise operations and optional CPU intrinsics (BMI2 when available) as well as a dynamic runtime bitboard with reduced functionality.
 
 It is designed for things like:
 
 - Board games (chess-like games, tactical engines)
 - Cellular automata
 - Grid simulations
-- ...
+- etc.
 ---
 
 ## Features
@@ -22,7 +24,7 @@ It is designed for things like:
 - Neighborhood masks (orthogonal and diagonal)
 - `pext` / `pdep` acceleration (BMI2 when available)
 - Zero runtime dimension cost (fully const-driven)
-- Runtime bitboard (with less functionality tho)
+- Runtime bitboard (with less functionality though)
 ---
 
 ## Getting Started
