@@ -1334,6 +1334,8 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 		impl Eq for #struct_ident {
 		}
 	};
+	let derive_bitboard_mask_res  = bitboard_mask_array_impl(&struct_ident);
+	
 	let impl_array = quote! {
 		impl bitboard::Bitboard for #struct_ident {
 			type Storage = #storage_ty;
@@ -1729,6 +1731,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 			}
 		}
+		#derive_bitboard_mask_res
 		impl Clone for #struct_ident {
 			fn clone(&self) -> Self {
 				Self(self.0)
@@ -1806,210 +1809,179 @@ self.has_alignment_h::<N>()
 }
 }
 };*/
-#[proc_macro_derive(BitboardMask)]
-pub fn derive_bitboard_mask(item: TokenStream) -> TokenStream {
-	use syn::{parse_macro_input, ItemStruct, Fields};
-	
-	let input = parse_macro_input!(item as ItemStruct);
-	let ident = input.ident.clone();
-	
-	let storage_ty = match &input.fields {
-		Fields::Unnamed(fields) if fields.unnamed.len() == 1 => {
-			fields.unnamed.first().unwrap().ty.clone()
-		}
-		_ => {
-			return syn::Error::new_spanned(
-				input,
-				"BitboardMask can only be derived on tuple structs with one field"
-			)
-			.to_compile_error()
-			.into();
-		}
-	};
-	
-	let is_array = matches!(&storage_ty, syn::Type::Array(_));
-	
-	let impl_int = bitboard_mask_int_impl(&ident);
-	
+fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::TokenStream {
 	let impl_array = quote! {
-		impl std::ops::BitAnd for #ident {
-			type Output = Self;
-			#[inline(always)]
-			fn bitand(self, rhs: Self) -> Self {
-				let mut out = self.0;
-				for (a, b) in out.iter_mut().zip(rhs.0.iter()) {
-					*a &= *b;
+			impl std::ops::BitAnd for #ident {
+				type Output = Self;
+				#[inline(always)]
+				fn bitand(self, rhs: Self) -> Self {
+					let mut out = self.0;
+					for (a, b) in out.iter_mut().zip(rhs.0.iter()) {
+						*a &= *b;
+					}
+					Self(out)
 				}
-				Self(out)
 			}
-		}
 		
-		impl std::ops::BitOr for #ident {
-			type Output = Self;
-			#[inline(always)]
-			fn bitor(self, rhs: Self) -> Self {
-				let mut out = self.0;
-				for (a, b) in out.iter_mut().zip(rhs.0.iter()) {
-					*a |= *b;
+			impl std::ops::BitOr for #ident {
+				type Output = Self;
+				#[inline(always)]
+				fn bitor(self, rhs: Self) -> Self {
+					let mut out = self.0;
+					for (a, b) in out.iter_mut().zip(rhs.0.iter()) {
+						*a |= *b;
+					}
+					Self(out)
 				}
-				Self(out)
 			}
-		}
 		
-		impl std::ops::BitXor for #ident {
-			type Output = Self;
-			#[inline(always)]
-			fn bitxor(self, rhs: Self) -> Self {
-				let mut out = self.0;
-				for (a, b) in out.iter_mut().zip(rhs.0.iter()) {
-					*a ^= *b;
+			impl std::ops::BitXor for #ident {
+				type Output = Self;
+				#[inline(always)]
+				fn bitxor(self, rhs: Self) -> Self {
+					let mut out = self.0;
+					for (a, b) in out.iter_mut().zip(rhs.0.iter()) {
+						*a ^= *b;
+					}
+					Self(out)
 				}
-				Self(out)
 			}
-		}
 		
-		impl std::ops::BitAndAssign for #ident {
-			#[inline(always)]
-			fn bitand_assign(&mut self, rhs: Self) {
-				for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-					*a &= *b;
-				}
-			}
-		}
-		
-		impl std::ops::BitOrAssign for #ident {
-			#[inline(always)]
-			fn bitor_assign(&mut self, rhs: Self) {
-				for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-					*a |= *b;
-				}
-			}
-		}
-		
-		impl std::ops::BitXorAssign for #ident {
-			#[inline(always)]
-			fn bitxor_assign(&mut self, rhs: Self) {
-				for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
-					*a ^= *b;
-				}
-			}
-		}
-		impl std::ops::Not for #ident {
-			type Output = Self;
-			
-			#[inline(always)]
-			fn not(self) -> Self::Output {
-				let mut out = self.0;
-				for a in out.iter_mut() {
-					*a = !*a;
-				}
-				Self(out)
-			}
-		}
-		
-		impl std::ops::Shl<usize> for #ident {
-			type Output = Self;
-			
-			#[inline(always)]
-			fn shl(self, rhs: usize) -> Self {
-				let mut out = self.0;
-				for a in out.iter_mut() {
-					*a <<= rhs;
-				}
-				Self(out)
-			}
-		}
-		
-		impl std::ops::Shr<usize> for #ident {
-			type Output = Self;
-			
-			#[inline(always)]
-			fn shr(self, rhs: usize) -> Self {
-				let mut out = self.0;
-				for a in out.iter_mut() {
-					*a >>= rhs;
-				}
-				Self(out)
-			}
-		}
-		impl std::ops::ShlAssign<usize> for #ident {
-			#[inline(always)]
-			fn shl_assign(&mut self, rhs: usize) {
-				for a in self.0.iter_mut() {
-					*a <<= rhs;
-				}
-			}
-		}
-		
-		impl std::ops::ShrAssign<usize> for #ident {
-			#[inline(always)]
-			fn shr_assign(&mut self, rhs: usize) {
-				for a in self.0.iter_mut() {
-					*a >>= rhs;
-				}
-			}
-		}
-		impl std::ops::Shl<u8> for #ident {
-			type Output = Self;
-			
-			#[inline(always)]
-			fn shl(self, rhs: u8) -> Self {
-				let mut out = self.0;
-				for a in out.iter_mut() {
-					*a <<= rhs;
-				}
-				Self(out)
-			}
-		}
-		
-		impl std::ops::Shr<u8> for #ident {
-			type Output = Self;
-			
-			#[inline(always)]
-			fn shr(self, rhs: u8) -> Self {
-				let mut out = self.0;
-				for a in out.iter_mut() {
-					*a >>= rhs;
-				}
-				Self(out)
-			}
-		}
-		
-		
-		impl std::ops::SubAssign<usize> for #ident {
-			#[inline(always)]
-			fn sub_assign(&mut self, rhs: usize) {
-				let mut carry = rhs as u64;
-				
-				for word in self.0.iter_mut() {
-					let (new_word, overflow) = word.overflowing_sub(carry);
-					*word = new_word;
-					carry = if overflow { 1 } else { 0 };
-					
-					if carry == 0 {
-						break;
+			impl std::ops::BitAndAssign for #ident {
+				#[inline(always)]
+				fn bitand_assign(&mut self, rhs: Self) {
+					for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+						*a &= *b;
 					}
 				}
 			}
-		}
-		impl std::ops::Sub<usize> for #ident {
-			type Output = Self;
-			
-			fn sub(mut self, rhs: usize) -> Self::Output {
-				self -= rhs as usize;
-				self
-			}
-		}
 		
-	};
-	
-	let impl_storage = if is_array { impl_array } else { impl_int };
-	
-	let output = quote! {
-		#impl_storage
-	};
-	
-	output.into()
+			impl std::ops::BitOrAssign for #ident {
+				#[inline(always)]
+				fn bitor_assign(&mut self, rhs: Self) {
+					for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+						*a |= *b;
+					}
+				}
+			}
+		
+			impl std::ops::BitXorAssign for #ident {
+				#[inline(always)]
+				fn bitxor_assign(&mut self, rhs: Self) {
+					for (a, b) in self.0.iter_mut().zip(rhs.0.iter()) {
+						*a ^= *b;
+					}
+				}
+			}
+			impl std::ops::Not for #ident {
+				type Output = Self;
+			
+				#[inline(always)]
+				fn not(self) -> Self::Output {
+					let mut out = self.0;
+					for a in out.iter_mut() {
+						*a = !*a;
+					}
+					Self(out)
+				}
+			}
+		
+			impl std::ops::Shl<usize> for #ident {
+				type Output = Self;
+			
+				#[inline(always)]
+				fn shl(self, rhs: usize) -> Self {
+					let mut out = self.0;
+					for a in out.iter_mut() {
+						*a <<= rhs;
+					}
+					Self(out)
+				}
+			}
+		
+			impl std::ops::Shr<usize> for #ident {
+				type Output = Self;
+			
+				#[inline(always)]
+				fn shr(self, rhs: usize) -> Self {
+					let mut out = self.0;
+					for a in out.iter_mut() {
+						*a >>= rhs;
+					}
+					Self(out)
+				}
+			}
+			impl std::ops::ShlAssign<usize> for #ident {
+				#[inline(always)]
+				fn shl_assign(&mut self, rhs: usize) {
+					for a in self.0.iter_mut() {
+						*a <<= rhs;
+					}
+				}
+			}
+		
+			impl std::ops::ShrAssign<usize> for #ident {
+				#[inline(always)]
+				fn shr_assign(&mut self, rhs: usize) {
+					for a in self.0.iter_mut() {
+						*a >>= rhs;
+					}
+				}
+			}
+			impl std::ops::Shl<u8> for #ident {
+				type Output = Self;
+			
+				#[inline(always)]
+				fn shl(self, rhs: u8) -> Self {
+					let mut out = self.0;
+					for a in out.iter_mut() {
+						*a <<= rhs;
+					}
+					Self(out)
+				}
+			}
+		
+			impl std::ops::Shr<u8> for #ident {
+				type Output = Self;
+			
+				#[inline(always)]
+				fn shr(self, rhs: u8) -> Self {
+					let mut out = self.0;
+					for a in out.iter_mut() {
+						*a >>= rhs;
+					}
+					Self(out)
+				}
+			}
+		
+		
+			impl std::ops::SubAssign<usize> for #ident {
+				#[inline(always)]
+				fn sub_assign(&mut self, rhs: usize) {
+					let mut carry = rhs as u64;
+				
+					for word in self.0.iter_mut() {
+						let (new_word, overflow) = word.overflowing_sub(carry);
+						*word = new_word;
+						carry = if overflow { 1 } else { 0 };
+					
+						if carry == 0 {
+							break;
+						}
+					}
+				}
+			}
+			impl std::ops::Sub<usize> for #ident {
+				type Output = Self;
+			
+				fn sub(mut self, rhs: usize) -> Self::Output {
+					self -= rhs as usize;
+					self
+				}
+			}
+		
+		};
+	impl_array
 }
 
 fn bitboard_mask_int_impl(ident: &syn::Ident) -> proc_macro2::TokenStream {
@@ -2180,47 +2152,4 @@ pub fn derive_bitboard_debug(item: TokenStream) -> TokenStream {
 	
 	output.into()
 }
-
-
-
-/*
-fn generate_alignment_fn(
-name: &str,
-offset: usize,
-storage_ty: &syn::Type,
-max_n: usize,
-) -> proc_macro2::TokenStream {
-let mut match_arms = Vec::new();
-
-for n in 2..=max_n {
-let mut lines = Vec::new();
-let mut prev = quote! { bits };
-
-for i in 1..n {
-let ident = syn::Ident::new(&format!("x{}", i), proc_macro2::Span::call_site());
-lines.push(quote! {
-let #ident = #prev & (#prev >> #offset);
-});
-prev = quote! { #ident };
-}
-
-match_arms.push(quote! {
-#n => {
-#(#lines)*
-#prev != 0
-}
-});
-}
-
-quote! {
-pub const fn #name<const N: usize>(&self) -> bool {
-let bits: #storage_ty = self.0;
-match N {
-#(#match_arms,)*
-_ => false,
-}
-}
-}
-}
-*/
 

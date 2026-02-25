@@ -1,6 +1,6 @@
 
 use bitboard::{BitIter, Bitboard, bitboard_table};
-use bitboard_proc_macro::{BitboardDebug, BitboardDisplay, BitboardMask, bitboard};
+use bitboard_proc_macro::{BitboardDebug, BitboardDisplay, bitboard};
 
 #[bitboard(width=7,height=7)]
 #[derive(Default, BitboardDebug, BitboardDisplay, Hash)]
@@ -61,7 +61,7 @@ struct Test;
 //    }
 //}
 #[bitboard(width=15,height=80, col_major=true)]
-#[derive(BitboardDebug, BitboardMask, BitboardDisplay)]
+#[derive(BitboardDebug, BitboardDisplay)]
 struct Test2;
 
 
