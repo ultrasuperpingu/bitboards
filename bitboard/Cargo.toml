@@ -1,0 +1,62 @@
+[package]
+name = "bitboard"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+
+[dependencies]
+num-traits = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+target-cpu = "native"
+panic = "abort"
+incremental = false
+debug = false
+
+
+[package.metadata.cargo-asm]
+rustflags = ["-C", "target-feature=+bmi2"]
+
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-feature=+bmi2"]
+
+[dev-dependencies]
+criterion = "0.8.2"
+rand = "0.10.0"
+bitboard_proc_macro = {path="../bitboard_proc_macro"}
+
+#[[bench]]
+#name = "bench_xor"
+#harness = false
+
+#[[bench]]
+#name = "pop_lsb_u64"
+#harness = false
+
+#[[bench]]
+#name = "pop_lsb_u128"
+#harness = false
+
+#[[bench]]
+#name = "pext_u64"
+#harness = false
+
+#[[bench]]
+#name = "pext_u128"
+#harness = false
+
+#[[bench]]
+#name = "pdep_u64"
+#harness = false
+
+#[[bench]]
+#name = "pdep_u128"
+#harness = false
+
+[[bench]]
+name = "sliding_attacks"
+harness = false
