@@ -771,18 +771,33 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 		}
 		impl #struct_ident {
+			/// Bitboard representing all border squares (west, east, north, south).
 			pub const BORDER: Self = Self((#left_mask | #right_mask | #top_mask | #bottom_mask) as #storage_ty);
+			/// Bitboard representing the western (left) border.
 			pub const WEST_BORDER: Self = Self(#left_mask as #storage_ty);
+			/// Bitboard representing the eastern (right) border.
 			pub const EAST_BORDER: Self = Self(#right_mask as #storage_ty);
+			/// Bitboard representing the northern (top) border.
 			pub const NORTH_BORDER: Self = Self(#top_mask as #storage_ty);
+			/// Bitboard representing the southern (bottom) border.
 			pub const SOUTH_BORDER: Self = Self(#bottom_mask as #storage_ty);
+			/// Bitboard representing the center of the board:
+			/// - If both width and height are odd, a single central square.
+			/// - If width or height is even, the central region (multiple squares).
 			pub const CENTER: Self = Self(#center_mask as #storage_ty);
+			/// Bitboard with all odd-indexed squares set (x+y is odd).
 			pub const ODD_SQUARES: Self   = Self(#odd_mask   as #storage_ty);
+			/// Bitboard with all even-indexed squares set (x+y is even).
 			pub const EVEN_SQUARES: Self  = Self(#even_mask  as #storage_ty);
+			/// Bitboard representing the four corner squares.
 			pub const CORNERS: Self       = Self(#corners_mask as #storage_ty);
+			/// Bitboard representing the northern half of the board.
 			pub const NORTH: Self         = Self(#north_mask as #storage_ty);
+			/// Bitboard representing the southern half of the board.
 			pub const SOUTH: Self         = Self(#south_mask as #storage_ty);
+			/// Bitboard representing the western half of the board.
 			pub const WEST: Self          = Self(#west_mask  as #storage_ty);
+			/// Bitboard representing the eastern half of the board.
 			pub const EAST: Self          = Self(#east_mask  as #storage_ty);
 			
 			/*fn flip(&mut self) {
@@ -792,31 +807,37 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			fn mask_flip(&mut self, mask: Self) {
 			self.0 ^= mask.0;
 			}*/
+			/// Extracts the bits along the ascending diagonal (bottom-left → top-right) at `index`.
 			#[inline(always)]
-			fn extract_diag_inc(&self, index: usize) -> <Self as bitboard::Bitboard>::Storage {
+			pub fn extract_diag_inc(&self, index: usize) -> <Self as bitboard::Bitboard>::Storage {
 				self.pext(&Self::compute_diag_inc_mask(index))
 			}
 			
+			/// Inserts `bits` along the ascending diagonal (bottom-left → top-right) at `index`.
 			#[inline(always)]
-			fn insert_diag_inc(&mut self, index: usize, bits: <Self as bitboard::Bitboard>::Storage) {
+			pub fn insert_diag_inc(&mut self, index: usize, bits: <Self as bitboard::Bitboard>::Storage) {
 				let mask = Self::compute_diag_inc_mask(index);
 				let new = mask.pdep(bits);
 				let cleared = Self::from_storage(self.storage() & !mask.storage());
 				*self = cleared | new;
 			}
+			/// Extracts the bits along the descending diagonal (top-left → bottom-right) at `index`.
 			#[inline(always)]
-			fn extract_diag_dec(&self, index: usize) -> <Self as bitboard::Bitboard>::Storage {
+			pub fn extract_diag_dec(&self, index: usize) -> <Self as bitboard::Bitboard>::Storage {
 				self.pext(&Self::compute_diag_dec_mask(index))
 			}
 			
+			/// Inserts `bits` along the descending diagonal (top-left → bottom-right) at `index`.
 			#[inline(always)]
-			fn insert_diag_dec(&mut self, index: usize, bits: <Self as bitboard::Bitboard>::Storage) {
+			pub fn insert_diag_dec(&mut self, index: usize, bits: <Self as bitboard::Bitboard>::Storage) {
 				let mask = Self::compute_diag_dec_mask(index);
 				let new = mask.pdep(bits);
 				let cleared = Self::from_storage(self.storage() & !mask.storage());
 				*self = cleared | new;
 			}
-			fn generate_attack_tables_pext(
+			/// Generates attack tables using `mask_fn` to define relevant squares and `attack_fn`
+			/// to compute attacks given blockers. Returns a vector of attack tables for all squares.
+			pub fn generate_attack_tables_pext(
 				mask_fn: fn(u8) -> Self,
 				attack_fn: fn(u8, Self) -> Self
 			) -> Vec<Vec<Self>>
@@ -843,6 +864,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 		}
 		impl #struct_ident {
+			/// Returns a bitboard mask for row `y`.
 			#[inline(always)]
 			pub const fn row_mask(y: u8) -> Self {
 				if Self::COL_MAJOR {
@@ -851,6 +873,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					Self((((1 as #storage_ty) << Self::WIDTH as usize) - 1) << (y as usize * Self::WIDTH as usize))
 				}
 			}
+			/// Returns a bitboard mask for column `x`.
 			#[inline(always)]
 			pub const fn col_mask(x: u8) -> Self {
 				if Self::COL_MAJOR {
@@ -859,7 +882,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					Self(Self::WEST_BORDER.0 << x)
 				}
 			}
-
+			/// Computes the orthogonal neighbors (N, S, E, W) of the square at `index`.
 			#[inline]
 			pub const fn compute_neighbors_ortho_mask(index: usize) -> Self {
 				let (x, y) = Self::coords_from_index(index);
@@ -880,7 +903,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				bb
 			}
-
+			/// Generates a table of orthogonal neighbors for all squares.
 			pub const fn generate_neighbors_ortho_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -890,7 +913,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				arr
 			}
-
+			/// Computes the diagonal neighbors (NW, NE, SW, SE) of the square at `index`.
 			#[inline]
 			pub const fn compute_neighbors_diag_mask(index: usize) -> Self {
 				let (x, y) = Self::coords_from_index(index);
@@ -922,6 +945,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				bb
 			}
+			/// Generates a table of diagonal neighbors for all squares.
 			pub const fn generate_neighbors_diag_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -931,13 +955,14 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				arr
 			}
-
+			/// Computes all 8 neighbors (orthogonal + diagonal) for a given square.
 			#[inline]
 			pub const fn compute_neighbors_8_mask(index: usize) -> Self {
 				let ortho = Self::compute_neighbors_ortho_mask(index);
 				let diag  = Self::compute_neighbors_diag_mask(index);
 				Self::from_storage(ortho.storage() | diag.storage())
 			}
+			/// Generates a table of all 8 neighbors for all squares.
 			pub const fn generate_neighbors_8_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -947,7 +972,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				arr
 			}
-
+			/// Computes a ray from `index` in direction `(dx, dy)` until board edge.
 			#[inline]
 			const fn compute_ray_mask(index: usize, dx: isize, dy: isize) -> Self {
 				let (mut x, mut y) = Self::coords_from_index(index);
@@ -973,12 +998,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				bb
 			}
-
+			/// Computes a ray from `index` in north direction until board edge.
 			#[inline]
 			pub const fn compute_ray_n_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, 0, 1)
 			}
-
+			/// Generates a table of north ray for all squares.
 			pub const fn generate_ray_n_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -990,10 +1015,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 
 
+			/// Computes a ray from `index` in south direction until board edge.
 			#[inline]
 			pub const fn compute_ray_s_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, 0, -1)
 			}
+			/// Generates a table of south ray for all squares.
 			pub const fn generate_ray_s_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1004,10 +1031,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes a ray from `index` in east direction until board edge.
 			#[inline]
 			pub const fn compute_ray_e_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, 1, 0)
 			}
+			/// Generates a table of east ray for all squares.
 			pub const fn generate_ray_e_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1018,10 +1047,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes a ray from `index` in west direction until board edge.
 			#[inline]
 			pub const fn compute_ray_w_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, -1, 0)
 			}
+			/// Generates a table of west ray for all squares.
 			pub const fn generate_ray_w_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1032,10 +1063,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes a ray from `index` in north-east direction until board edge.
 			#[inline]
 			pub const fn compute_ray_ne_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, 1, 1)
 			}
+			/// Generates a table of north-east ray for all squares.
 			pub const fn generate_ray_ne_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1046,10 +1079,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes a ray from `index` in north-west direction until board edge.
 			#[inline]
 			pub const fn compute_ray_nw_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, -1, 1)
 			}
+			/// Generates a table of north-west ray for all squares.
 			pub const fn generate_ray_nw_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1060,10 +1095,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes a ray from `index` in south-east direction until board edge.
 			#[inline]
 			pub const fn compute_ray_se_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, 1, -1)
 			}
+			/// Generates a table of south-east ray for all squares.
 			pub const fn generate_ray_se_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1074,10 +1111,12 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes a ray from `index` in south-west direction until board edge.
 			#[inline]
 			pub const fn compute_ray_sw_mask(index: usize) -> Self {
 				Self::compute_ray_mask(index, -1, -1)
 			}
+			/// Generates a table of south-west ray for all squares.
 			pub const fn generate_ray_sw_table() -> [Self; Self::NB_SQUARES] {
 				let mut arr = [Self(0); Self::NB_SQUARES];
 				let mut i = 0;
@@ -1088,6 +1127,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes ascending diagonal mask (bottom-left → top-right) for square at `index`.
 			#[inline(always)]
 			pub const fn compute_diag_inc_mask(index: usize) -> Self {
 				let (x0, y0) = Self::coords_from_index(index);
@@ -1128,6 +1168,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				arr
 			}
 
+			/// Computes descending diagonal mask (top-left → bottom-right) for square at `index`.
 			#[inline(always)]
 			pub const fn compute_diag_dec_mask(index: usize) -> Self {
 				let (x0, y0) = Self::coords_from_index(index);
@@ -1166,7 +1207,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				arr
 			}
-			
+			/// Returns the row mask for the square at `index`.
 			#[inline(always)]
 			pub const fn compute_row_mask(index: usize) -> Self {
 				let y = if Self::COL_MAJOR {
@@ -1176,7 +1217,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				};
 				Self::row_mask(y as u8)
 			}
-
+			/// Returns the column mask for the square at `index`.
 			#[inline(always)]
 			pub const fn compute_col_mask(index: usize) -> Self {
 				let x = if Self::COL_MAJOR {
@@ -1186,7 +1227,8 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				};
 				Self::col_mask(x as u8)
 			}
-
+			/// Shifts the bitboard by `(dx, dy)` using scanline iteration.
+			/// This is a naive but simple implementation that checks each bit individually.
 			#[inline(always)]
 			pub const fn shift_scanline(&self, dx: i16, dy: i16) -> Self {
 				let mut out: #storage_ty = 0;
@@ -1212,6 +1254,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				Self(out)
 			}
+			/// Shifts the bitboard by `(dx, dy)` efficiently using row/column extraction.
 			#[inline(always)]
 			pub fn shift(&self, dx: i16, dy: i16) -> Self {
 				if dx == 0 && dy == 0 {
@@ -1295,6 +1338,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				out
 			}
 
+			/// Converts `(dx, dy)` offsets into a bitboard index offset.
 			#[inline(always)]
 			pub const fn offset_coords_to_index(dx: i16, dy: i16) -> i16 {
 				dx * Self::H_OFFSET as i16 + dy * Self::V_OFFSET as i16
@@ -1315,35 +1359,33 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					_ => !0 as #storage_ty, // aucun masque
 				}
 			}
+			/// Shift bitboard one square north (up).
 			#[inline(always)]
 			pub const fn shift_n(&self) -> Self {
-				// shift vers le haut = +V_OFFSET
 				Self::from_storage((self.0 & Self::NO_WRAP_N_MASK) << Self::V_OFFSET)
 			}
-
+			/// Shift bitboard one square south (down).
 			#[inline(always)]
 			pub const fn shift_s(&self) -> Self {
-				// shift vers le bas = -V_OFFSET
 				Self::from_storage((self.0 & Self::NO_WRAP_S_MASK) >> Self::V_OFFSET)
 			}
-
+			/// Shift bitboard one square east (right).
 			#[inline(always)]
 			pub const fn shift_e(&self) -> Self {
-				// shift vers la droite = +H_OFFSET
 				Self::from_storage((self.0 & Self::NO_WRAP_E_MASK) << Self::H_OFFSET)
 			}
-
+			/// Shift bitboard one square west (left).
 			#[inline(always)]
 			pub const fn shift_w(&self) -> Self {
-				// shift vers la gauche = -H_OFFSET
 				Self::from_storage((self.0 & Self::NO_WRAP_W_MASK) >> Self::H_OFFSET)
 			}
+			/// Shift bitboard one square north-east.
 			#[inline(always)]
 			pub const fn shift_ne(&self) -> Self {
 				let delta = Self::H_OFFSET as isize + Self::V_OFFSET as isize;
 				Self::from_storage((self.0 & Self::NO_WRAP_NE_MASK) << delta)
 			}
-
+			/// Shift bitboard one square north-west.
 			#[inline(always)]
 			pub const fn shift_nw(&self) -> Self {
 				let delta = Self::V_OFFSET as isize - Self::H_OFFSET as isize;
@@ -1353,7 +1395,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					Self::from_storage((self.0 & Self::NO_WRAP_NW_MASK) >> (-delta))
 				}
 			}
-
+			/// Shift bitboard one square south-east.
 			#[inline(always)]
 			pub const fn shift_se(&self) -> Self {
 				let delta = Self::H_OFFSET as isize - Self::V_OFFSET as isize;
@@ -1363,21 +1405,28 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					Self::from_storage((self.0 & Self::NO_WRAP_SE_MASK) >> (-delta))
 				}
 			}
-
+			/// Shift bitboard one square south-west.
 			#[inline(always)]
 			pub const fn shift_sw(&self) -> Self {
 				let delta = -(Self::H_OFFSET as isize + Self::V_OFFSET as isize);
 				Self::from_storage((self.0 & Self::NO_WRAP_SW_MASK) >> (-delta))
 			}
 
-
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_N_MASK : #storage_ty = !Self::row_mask(Self::HEIGHT - 1).storage();
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_S_MASK : #storage_ty = !Self::row_mask(0).storage();
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_E_MASK : #storage_ty = !Self::col_mask(Self::WIDTH - 1).storage();
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_W_MASK : #storage_ty = !Self::col_mask(0).storage();
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_NE_MASK : #storage_ty = Self::NO_WRAP_N_MASK & Self::NO_WRAP_E_MASK;
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_NW_MASK : #storage_ty = Self::NO_WRAP_N_MASK & Self::NO_WRAP_W_MASK;
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_SE_MASK : #storage_ty = Self::NO_WRAP_S_MASK & Self::NO_WRAP_E_MASK;
+			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_SW_MASK : #storage_ty = Self::NO_WRAP_S_MASK & Self::NO_WRAP_W_MASK;
 			
 			
