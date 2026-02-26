@@ -89,14 +89,22 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 	};
 	let width_u8 = width as u8;
 	let height_u8 = height as u8;
-	let bitboard_impl_common = quote!{
+	let bitboard_impl_common = quote! {
+		/// Width of the Bitboard
 		pub const WIDTH: u8 = #width_u8;
+		/// Height of the Bitboard
 		pub const HEIGHT: u8 = #height_u8;
+		/// Total number of squares in the bitboard
 		pub const NB_SQUARES: usize = Self::WIDTH as usize * Self::HEIGHT as usize;
+		/// Whether the square indexes are in column-major order
 		pub const COL_MAJOR: bool = #col_major;
+		/// Offset to add/subtract to an index to move to the next column
 		pub const H_OFFSET: usize = if Self::COL_MAJOR { Self::HEIGHT as usize } else { 1 };
+		/// Offset to add/subtract to an index to move to the next row
 		pub const V_OFFSET: usize = if Self::COL_MAJOR { 1 } else { Self::WIDTH as usize };
+		/// Offset to add/subtract to an index to move to the top-right diagonal square
 		pub const DIAG_INC_OFFSET: u8 = Self::WIDTH - 1;
+		/// Offset to add/subtract to an index to move to the bottom-left diagonal square
 		pub const DIAG_DEC_OFFSET: u8 = Self::WIDTH + 1;
 		
 	};
@@ -395,52 +403,67 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 	let impl_int = quote! {
 		impl bitboard::Bitboard for #struct_ident {
 			type Storage = #storage_ty;
+			/// Width of the bitboard
+			#[inline(always)]
 			fn width(&self) -> u8 {
 				Self::WIDTH as u8
 			}
+			/// Height of the bitboard
+			#[inline(always)]
 			fn height(&self) -> u8 {
 				Self::HEIGHT as u8
 			}
+			/// Whether the square indexes are in column-major order
+			#[inline(always)]
 			fn col_major(&self) -> bool {
 				Self::COL_MAJOR
 			}
+			/// True if the bitboard is empty
 			#[inline(always)]
 			fn is_empty(&self) -> bool {
 				self.0 == 0
 			}
+			/// Returns the number of set bits (occupied squares) in the bitboard.
 			#[inline(always)]
 			fn count(&self) -> u32 {
 				self.0.count_ones()
 			}
+			/// Returns `true` if this bitboard intersects with another (i.e., they share at least one set bit).
 			#[inline(always)]
 			fn intersects(&self, other: &Self) -> bool {
 				self.0 & other.0 != 0
 			}
+			/// Returns `true` if any bit is set in the bitboard.
 			#[inline(always)]
 			fn any(&self) -> bool {
 				self.0 != 0
 			}
+			/// Returns a reference to the underlying storage of the bitboard.
 			#[inline(always)]
 			fn storage(&self) -> &Self::Storage {
 				&self.0
 			}
+			/// Returns a mutable reference to the underlying storage of the bitboard.
 			#[inline(always)]
 			fn storage_mut(&mut self) -> &mut Self::Storage {
 				&mut self.0
 			}
+			/// Returns `true` if the bit at the given linear `idx` is set.
 			#[inline(always)]
 			fn get_at_index(&self, idx: usize) -> bool {
 				(self.0 & (1 << idx)) != 0
 			}
-			
+			/// Sets the bit at the given linear `idx`.
 			#[inline(always)]
 			fn set_at_index(&mut self, idx: usize) {
 				self.0 |= 1 << idx;
 			}
+			/// Clears the bit at the given linear `idx`.
 			#[inline(always)]
 			fn reset_at_index(&mut self, idx: usize) {
 				self.0 &= !(1 << idx);
 			}
+			/// Sets or clears the bit at the given linear `idx` according to `val`.
 			#[inline(always)]
 			fn set_value_at_index(&mut self, idx: usize, val: bool) {
 				if val {
@@ -449,48 +472,56 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					self.0 &= !(1 << idx);
 				}
 			}
+			/// Toggles the bit at the given linear `idx`.
 			#[inline(always)]
 			fn toggle_at_index(&mut self, idx: usize) {
 				self.0 ^= 1 << idx;
 			}
+			/// Returns `true` if the bit at coordinates `(x, y)` is set.
 			#[inline(always)]
 			fn get(&self, x: u8, y: u8) -> bool {
 				let idx = Self::index_from_coords(x, y);
 				self.get_at_index(idx)
 			}
-			/// Sets the bit at coordinates `(x, y)`.
+			/// Sets or clears the bit at coordinates `(x, y)` according to `val`.
 			#[inline(always)]
 			fn set_value(&mut self, x: u8, y: u8, val: bool) {
 				let idx = Self::index_from_coords(x, y);
 				self.set_value_at_index(idx, val)
 			}
+			/// Sets the bit at coordinates `(x, y)`.
 			#[inline(always)]
 			fn set(&mut self, x: u8, y: u8) {
 				let idx = Self::index_from_coords(x, y);
 				self.set_at_index(idx)
 			}
+			/// Clears the bit at coordinates `(x, y)`.
 			#[inline(always)]
 			fn reset(&mut self, x: u8, y: u8) {
 				let idx = Self::index_from_coords(x, y);
 				self.reset_at_index(idx)
 			}
+			/// Returns a new bitboard with all bits inverted (masking out any bits outside the board).
 			#[inline(always)]
 			fn flipped(&self) -> Self {
-				Self::from_storage(!self.0)
+				Self::from_storage(!self.0)&Self::FULL
 			}
 
 			#pext_pdep
-			
+
+			/// Extracts the bits of row `y` and returns them as a compact value in storage.
 			#[inline(always)]
 			fn extract_row(&self, y: u8) -> Self::Storage {
 				let mask = Self::row_mask(y);
 				self.pext(&mask)
 			}
+			/// Extracts the bits of column `x` and returns them as a compact value in storage.
 			#[inline(always)]
 			fn extract_col(&self, x: u8) -> Self::Storage {
 				let mask = Self::col_mask(x);
 				self.pext(&mask)
 			}
+			/// Inserts the `row_bits` (compact format)  into row `y`, replacing the previous row bits.
 			#[inline(always)]
 			fn insert_row(&mut self, y: u8, row_bits: Self::Storage) {
 				let mask = Self::row_mask(y);
@@ -500,7 +531,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				*self = cleared | new_row;
 			}
-
+			/// Inserts the `col_bits` (compact format) into column `x`, replacing the previous column bits.
 			#[inline(always)]
 			fn insert_col(&mut self,x: u8, col_bits: Self::Storage) {
 				let mask = Self::col_mask(x);
@@ -515,46 +546,57 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 		impl #struct_ident {
 			#bitboard_impl_common
+			/// An empty bitboard (all bits cleared).
 			pub const EMPTY: Self = Self(0);
+			/// A full bitboard (all bits set except those outside the board).
 			pub const FULL: Self = Self(#full_mask as #storage_ty);
+			/// Returns an empty bitboard.
 			#[inline(always)]
 			fn new() -> Self {
 				Self::empty()
 			}
 
+			/// Returns an empty bitboard.
 			#[inline(always)]
 			pub const fn empty() -> Self {
 				Self(0)
 			}
-
+			// Construct a Bitboard from its underlying storage representation
 			#[inline(always)]
 			pub const fn from_storage(v: <Self as bitboard::Bitboard>::Storage) -> Self {
 				Self(v)
 			}
+			/// Constructs a bitboard with a single bit set at linear index `idx`.
 			#[inline(always)]
 			pub const fn from_index(idx: usize) -> Self {
 				Self(1 << idx)
 			}
+			/// Constructs a bitboard with a single bit set at coordinates `(x, y)`.
 			#[inline(always)]
 			pub const fn from_coords(x: u8, y: u8) -> Self {
 				Self::from_index(Self::index_from_coords(x,y))
 			}
+			/// Returns the underlying storage value of the bitboard.
 			#[inline(always)]
 			pub const fn storage(&self) -> <Self as bitboard::Bitboard>::Storage {
 				self.0
 			}
+			/// Returns a new bitboard with all bits inverted, masking out any bits outside the board.
 			#[inline(always)]
 			pub const fn flipped(&self) -> Self {
 				Self::from_storage(!self.0 & Self::FULL.storage())
 			}
+			/// Returns `true` if the bit at linear index `idx` is set.
 			#[inline(always)]
 			pub const fn get_at_index(&self, idx: usize) -> bool {
 				(self.0 & (1 << idx)) != 0
 			}
+			/// Sets the bit at linear index `idx`.
 			#[inline(always)]
 			pub const fn set_at_index(&mut self, idx: usize) {
 				self.0 |= 1 << idx;
 			}
+			/// Returns `(x, y)` coordinates corresponding to a linear index `i`.
 			#[inline]
 			pub const fn coords_from_index(i: usize) -> (u8, u8) {
 				if Self::COL_MAJOR {
@@ -563,6 +605,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					((i % Self::WIDTH as usize) as u8, (i / Self::WIDTH as usize) as u8)
 				}
 			}
+			/// Returns the linear index corresponding to coordinates `(x, y)`.
 			#[inline]
 			pub const fn index_from_coords(x: u8, y: u8) -> usize {
 				if Self::COL_MAJOR {
@@ -571,6 +614,8 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					y as usize * Self::WIDTH as usize + x as usize
 				}
 			}
+			/// Generates a table of sliding attack bitboards given movement `offsets`.
+			/// Each entry corresponds to attacks from a square in the bitboard.
 			pub fn generate_sliding_attacks_table(offsets: &[(i8, i8)]) -> [#struct_ident; Self::NB_SQUARES] 
 			{
 				let mut attacks = [Self::EMPTY;Self::NB_SQUARES];
@@ -599,6 +644,9 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				attacks
 			}
+			
+			/// Generates a table of jump attack bitboards given movement `offsets`.
+			/// Each entry corresponds to single-step jumps from a square.
 			pub const fn generate_jump_attacks_table(offsets: &[(i8, i8)]) -> [#struct_ident; Self::NB_SQUARES] {
 				let mut out = [Self::EMPTY;Self::NB_SQUARES];
 
@@ -633,11 +681,14 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				out
 			}
+			/// Precomputed masks of all squares between any two squares on the bitboard.
 			pub const RAY_BETWEEN_MASKS: [[Self; Self::NB_SQUARES]; Self::NB_SQUARES] = Self::generate_ray_between_table();
+			/// Returns the precomputed bitboard mask of squares between `from` and `to`.
 			#[inline(always)]
 			pub fn ray_between_mask(from: usize, to: usize) -> Self {
 				Self::RAY_BETWEEN_MASKS[from][to]
 			}
+			/// Generates the full ray-between mask table.
 			pub const fn generate_ray_between_table() -> [[Self; Self::NB_SQUARES]; Self::NB_SQUARES] {
 				let mut table = [[Self::from_storage(0); Self::NB_SQUARES]; Self::NB_SQUARES];
 				let mut from = 0;
@@ -653,12 +704,11 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				table
 			}
-
-			pub const fn compute_ray_between_mask(from: usize, to: usize) -> Self {
+			/// Computes the bitboard mask of all squares strictly between `from` and `to` on the same line.
+			const fn compute_ray_between_mask(from: usize, to: usize) -> Self {
 				let (fx, fy) = Self::coords_from_index(from);
 				let (tx, ty) = Self::coords_from_index(to);
 
-				// Vérification d’alignement
 				let same_file = fx == tx;
 				let same_rank = fy == ty;
 				let same_diag = (fx as i8 - fy as i8) == (tx as i8 - ty as i8);
@@ -689,6 +739,19 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 		}
 		impl #struct_ident {
+			/// Returns a `Vec` containing all subsets of the current bitboard.
+			///
+			/// Each subset is represented as a bitboard with a subset of bits set
+			/// that are also set in `self`. The subsets are generated in decreasing
+			/// order of bit patterns, starting from the empty bitboard.
+			///
+			/// # Example
+			/// ```
+			/// let bb = Bitboard::from_index(0) | Bitboard::from_index(1);
+			/// let subsets = bb.all_subsets();
+			/// // subsets will contain all combinations of bits {0, 1}:
+			/// // [empty, bit0, bit1, bit0|bit1]
+			/// ```
 			pub fn all_subsets(&self) -> Vec<Self>
 			{
 				let mut subsets = Vec::new();
