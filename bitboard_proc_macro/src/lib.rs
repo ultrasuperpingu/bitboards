@@ -771,6 +771,50 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				subsets
 			}
+			const NO_V_WRAP: Self = Self::from_storage(!Self::NORTH_BORDER.storage()); 
+			const NO_H_WRAP: Self = Self::from_storage(!Self::EAST_BORDER.storage());
+
+			const NO_DIAG_INC_WRAP: Self = Self::from_storage(!(Self::SOUTH_BORDER.storage() | Self::EAST_BORDER.storage()));
+			const NO_DIAG_DEC_WRAP: Self = Self::from_storage(!(Self::NORTH_BORDER.storage() | Self::EAST_BORDER.storage()));
+		
+			#[inline]
+			pub const fn has_n_aligned(&self, n: u8) -> bool {
+				if n == 0 { return true; }
+				if n == 1 { return self.0 != 0; }
+
+				// col
+				if self.check_direction(n, Self::V_OFFSET as u8, Self::NO_V_WRAP) {
+					return true;
+				}
+
+				// line
+				if self.check_direction(n, Self::H_OFFSET as u8, Self::NO_H_WRAP) {
+					return true;
+				}
+
+				// inc diag
+				if self.check_direction(n, Self::DIAG_INC_OFFSET, Self::NO_DIAG_INC_WRAP) {
+					return true;
+				}
+
+				// dec diag
+				if self.check_direction(n, Self::DIAG_DEC_OFFSET, Self::NO_DIAG_DEC_WRAP) {
+					return true;
+				}
+
+				false
+			}
+
+			#[inline(always)]
+			const fn check_direction(&self, n: u8, shift: u8, wrapping_around_mask: Self) -> bool {
+				let mut temp = self.0;
+				let mut i=1;
+				while i < n {
+					temp &= (temp >> shift) & wrapping_around_mask.0;
+					i += 1;
+				}
+				temp != 0
+			}
 		}
 		impl #struct_ident {
 			/// Bitboard representing all border squares (west, east, north, south).
