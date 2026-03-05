@@ -105,9 +105,9 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 		/// Offset to add/subtract to an index to move to the next row
 		pub const V_OFFSET: usize = if Self::COL_MAJOR { 1 } else { Self::WIDTH as usize };
 		/// Offset to add/subtract to an index to move to the top-right diagonal square
-		pub const DIAG_INC_OFFSET: u8 = Self::WIDTH - 1;
+		pub const DIAG_INC_OFFSET: u8 = Self::WIDTH + 1;
 		/// Offset to add/subtract to an index to move to the bottom-left diagonal square
-		pub const DIAG_DEC_OFFSET: u8 = Self::WIDTH + 1;
+		pub const DIAG_DEC_OFFSET: u8 = Self::WIDTH - 1;
 		
 	};
 	let bits = width * height;
@@ -771,46 +771,73 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				subsets
 			}
-			const NO_V_WRAP: Self = Self::from_storage(!Self::NORTH_BORDER.storage()); 
-			const NO_H_WRAP: Self = Self::from_storage(!Self::EAST_BORDER.storage());
-
-			const NO_DIAG_INC_WRAP: Self = Self::from_storage(!(Self::SOUTH_BORDER.storage() | Self::EAST_BORDER.storage()));
-			const NO_DIAG_DEC_WRAP: Self = Self::from_storage(!(Self::NORTH_BORDER.storage() | Self::EAST_BORDER.storage()));
-		
 			#[inline]
 			pub const fn has_n_aligned(&self, n: u8) -> bool {
 				if n == 0 { return true; }
 				if n == 1 { return self.0 != 0; }
 
-				// col
-				if self.check_direction(n, Self::V_OFFSET as u8, Self::NO_V_WRAP) {
-					return true;
-				}
-
-				// line
-				if self.check_direction(n, Self::H_OFFSET as u8, Self::NO_H_WRAP) {
-					return true;
-				}
-
-				// inc diag
-				if self.check_direction(n, Self::DIAG_INC_OFFSET, Self::NO_DIAG_INC_WRAP) {
-					return true;
-				}
-
-				// dec diag
-				if self.check_direction(n, Self::DIAG_DEC_OFFSET, Self::NO_DIAG_DEC_WRAP) {
-					return true;
-				}
-
-				false
+				self.has_n_aligned_horizontal(n) ||
+					self.has_n_aligned_vertical(n) ||
+					self.has_n_aligned_diag_dec(n) ||
+					self.has_n_aligned_diag_inc(n)
 			}
+			#[inline]
+			pub const fn has_n_aligned_horizontal(&self, n: u8) -> bool {
+				if n == 0 { return true; }
+				if n == 1 { return self.0 != 0; }
 
-			#[inline(always)]
-			const fn check_direction(&self, n: u8, shift: u8, wrapping_around_mask: Self) -> bool {
 				let mut temp = self.0;
 				let mut i=1;
 				while i < n {
-					temp &= (temp >> shift) & wrapping_around_mask.0;
+					if !Self::COL_MAJOR {
+						let west_mask = !Self::WEST_BORDER.storage();
+						temp&=(temp&west_mask)>>Self::H_OFFSET;
+					} else {
+						temp &= temp >> Self::H_OFFSET;
+					}
+					i += 1;
+				}
+				temp != 0
+			}
+			#[inline]
+			pub const fn has_n_aligned_vertical(&self, n: u8) -> bool {
+				if n == 0 { return true; }
+				if n == 1 { return self.0 != 0; }
+
+				let mut temp = self.0;
+				let mut i=1;
+				while i < n {
+					if Self::COL_MAJOR {
+						let south_mask = !Self::SOUTH_BORDER.storage();
+						temp&=(temp&south_mask)>>Self::V_OFFSET;
+					} else {
+						temp &= temp >> Self::V_OFFSET;
+					}
+					i += 1;
+				}
+				temp != 0
+			}
+			#[inline]
+			pub const fn has_n_aligned_diag_dec(&self, n: u8) -> bool {
+				if n <= 1 { return n == 1 && self.0 != 0 || n == 0; }
+				let mut temp = self.0;
+				let mut i = 1;
+				let mask = !Self::EAST_BORDER.storage();
+				while i < n {
+					temp &= (temp & mask) >> Self::DIAG_DEC_OFFSET;
+					i += 1;
+				}
+				temp != 0
+			}
+
+			#[inline]
+			pub const fn has_n_aligned_diag_inc(&self, n: u8) -> bool {
+				if n <= 1 { return n == 1 && self.0 != 0 || n == 0; }
+				let mut temp = self.0;
+				let mut i = 1;
+				let mask = !Self::WEST_BORDER.storage();
+				while i < n {
+					temp &= (temp & mask) >> Self::DIAG_INC_OFFSET;
 					i += 1;
 				}
 				temp != 0
