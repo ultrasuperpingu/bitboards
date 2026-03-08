@@ -314,6 +314,10 @@ impl Bitboard for SmallBitboard {
 		self.bits.trailing_zeros()
 	}
 	#[inline]
+	fn msb(&self) -> u32 {
+		self.bits.ilog2()
+	}
+	#[inline]
 	fn pop_lsb(&mut self) -> u32 {
 		let idx = self.bits.trailing_zeros();
 		self.bits &= self.bits - 1;

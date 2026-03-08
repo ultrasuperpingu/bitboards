@@ -274,7 +274,21 @@ impl Bitboard for LargeBitboard {
 	}
 	#[inline]
 	fn lsb(&self) -> u32 {
-		self.bits[0].trailing_zeros()
+		for (i, &segment) in self.bits.iter().enumerate() {
+			if segment != 0 {
+				return (i as u32 * 64) + segment.trailing_zeros();
+			}
+		}
+		self.bits.len() as u32 * 64
+	}
+	#[inline]
+	fn msb(&self) -> u32 {
+		for (i, &segment) in self.bits.iter().enumerate().rev() {
+			if segment != 0 {
+				return (i as u32 * 64) + segment.ilog2();
+			}
+		}
+		panic!("msb called on empty bitboard");
 	}
 	fn pop_lsb(&mut self) -> u32 {
 		for (word_index, word) in self.bits.iter_mut().enumerate() {

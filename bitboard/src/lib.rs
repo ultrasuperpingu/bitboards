@@ -161,8 +161,10 @@ pub trait Bitboard : Clone + PartialEq
 
 	/// Get flipped bitboard (ie: !self & full)
 	fn flipped(&self) -> Self;
-	// Get first (lsb) one index
+	// Get first (lsb) one index (returns WIDTH*HEIGHT if bitboard is empty)
 	fn lsb(&self) -> u32;
+	// Get last (msb) one index (panic if bitboard is empty)
+	fn msb(&self) -> u32;
 	/// Set first (lsb) one to zero and returns its index
 	fn pop_lsb(&mut self) -> u32;
 	/// Parallel bit extract (PEXT).

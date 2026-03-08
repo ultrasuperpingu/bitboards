@@ -189,6 +189,10 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			fn lsb(&self) -> u32 {
 				self.0.trailing_zeros()
 			}
+			#[inline(always)]
+			fn msb(&self) -> u32 {
+				self.0.ilog2()
+			}
 			#[inline]
 			fn pop_lsb(&mut self) -> u32 {
 				#[cfg(target_feature = "bmi2")]
@@ -321,6 +325,10 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				#[cfg(not(target_feature = "bmi1"))]
 				self.0.trailing_zeros()
+			}
+			#[inline(always)]
+			fn msb(&self) -> u32 {
+				self.0.ilog2()
 			}
 			#[inline]
 			#[allow(unreachable_code)]
@@ -1631,9 +1639,23 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				Self(a)
 			}
-			#[inline(always)]
+			#[inline]
 			fn lsb(&self) -> u32 {
-				self.0[0].trailing_zeros()
+				for (i, &segment) in self.0.iter().enumerate() {
+					if segment != 0 {
+						return (i as u32 * 64) + segment.trailing_zeros();
+					}
+				}
+				self.0.len() as u32 * 64
+			}
+			#[inline]
+			fn msb(&self) -> u32 {
+				for (i, &segment) in self.0.iter().enumerate().rev() {
+					if segment != 0 {
+						return (i as u32 * 64) + segment.ilog2();
+					}
+				}
+				panic!("msb called on empty bitboard");
 			}
 			fn pop_lsb(&mut self) -> u32 {
 				for (word_index, word) in self.0.iter_mut().enumerate() {

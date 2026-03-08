@@ -321,6 +321,10 @@ impl Bitboard for MediumBitboard {
 		self.bits.trailing_zeros()
 	}
 	#[inline]
+	fn msb(&self) -> u32 {
+		self.bits.ilog2()
+	}
+	#[inline]
 	fn pop_lsb(&mut self) -> u32 {
 		let low = self.bits as u64;
 
