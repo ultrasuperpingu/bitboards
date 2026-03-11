@@ -691,13 +691,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 				out
 			}
-			/// Precomputed masks of all squares between any two squares on the bitboard.
-			pub const RAY_BETWEEN_MASKS: [[Self; Self::NB_SQUARES]; Self::NB_SQUARES] = Self::generate_ray_between_table();
-			/// Returns the precomputed bitboard mask of squares between `from` and `to`.
-			#[inline(always)]
-			pub fn ray_between_mask(from: usize, to: usize) -> Self {
-				Self::RAY_BETWEEN_MASKS[from][to]
-			}
+
 			/// Generates the full ray-between mask table.
 			pub const fn generate_ray_between_table() -> [[Self; Self::NB_SQUARES]; Self::NB_SQUARES] {
 				let mut table = [[Self::from_storage(0); Self::NB_SQUARES]; Self::NB_SQUARES];
@@ -1760,6 +1754,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 		impl #struct_ident {
 
 			#bitboard_impl_common
+			pub const ARRAY_LEN: usize = #array_bytes;
 			pub const EMPTY: Self = Self([0;#array_bytes]);
 			pub const FULL: Self = Self([0xFFFFFFFF;#array_bytes]);
 			#[inline]
