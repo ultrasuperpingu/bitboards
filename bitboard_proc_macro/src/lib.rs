@@ -1,6 +1,7 @@
 
 mod bit_ops;
-use crate::bit_ops::*;
+mod common_impls;
+use crate::{bit_ops::*, common_impls::common_impl};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -60,7 +61,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 	let struct_ident = input_struct.ident.clone();
 	
 	let total_bits = width * height;
-	let array_bytes = total_bits.div_ceil(64);
+	let array_len = total_bits.div_ceil(64);
 	let is_storage_array = total_bits > 128; 
 	let storage_ty = if total_bits <= 8 {
 		quote! { u8 }
@@ -73,7 +74,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 	} else if total_bits <= 128 {
 		quote! { u128 }
 	} else {
-		quote! { [u64; #array_bytes] }
+		quote! { [u64; #array_len] }
 	};
 	
 	let expanded_struct = match &input_struct.fields {
@@ -91,25 +92,26 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 	};
 	let width_u8 = width as u8;
 	let height_u8 = height as u8;
-	let bitboard_impl_common = quote! {
-		/// Width of the Bitboard
-		pub const WIDTH: u8 = #width_u8;
-		/// Height of the Bitboard
-		pub const HEIGHT: u8 = #height_u8;
-		/// Total number of squares in the bitboard
-		pub const NB_SQUARES: usize = Self::WIDTH as usize * Self::HEIGHT as usize;
-		/// Whether the square indexes are in column-major order
-		pub const COL_MAJOR: bool = #col_major;
-		/// Offset to add/subtract to an index to move to the next column
-		pub const H_OFFSET: usize = if Self::COL_MAJOR { Self::HEIGHT as usize } else { 1 };
-		/// Offset to add/subtract to an index to move to the next row
-		pub const V_OFFSET: usize = if Self::COL_MAJOR { 1 } else { Self::WIDTH as usize };
-		/// Offset to add/subtract to an index to move to the top-right diagonal square
-		pub const DIAG_INC_OFFSET: u8 = Self::WIDTH + 1;
-		/// Offset to add/subtract to an index to move to the bottom-left diagonal square
-		pub const DIAG_DEC_OFFSET: u8 = Self::WIDTH - 1;
-		
-	};
+	//let bitboard_impl_common = quote! {
+	//	/// Width of the Bitboard
+	//	pub const WIDTH: u8 = #width_u8;
+	//	/// Height of the Bitboard
+	//	pub const HEIGHT: u8 = #height_u8;
+	//	/// Total number of squares in the bitboard
+	//	pub const NB_SQUARES: usize = Self::WIDTH as usize * Self::HEIGHT as usize;
+	//	/// Whether the square indexes are in column-major order
+	//	pub const COL_MAJOR: bool = #col_major;
+	//	/// Offset to add/subtract to an index to move to the next column
+	//	pub const H_OFFSET: usize = if Self::COL_MAJOR { Self::HEIGHT as usize } else { 1 };
+	//	/// Offset to add/subtract to an index to move to the next row
+	//	pub const V_OFFSET: usize = if Self::COL_MAJOR { 1 } else { Self::WIDTH as usize };
+	//	/// Offset to add/subtract to an index to move to the top-right diagonal square
+	//	pub const DIAG_INC_OFFSET: u8 = Self::WIDTH + 1;
+	//	/// Offset to add/subtract to an index to move to the bottom-left diagonal square
+	//	pub const DIAG_DEC_OFFSET: u8 = Self::WIDTH - 1;
+	//	
+	//};
+	let bitboard_impl_common = common_impl(&struct_ident, width_u8, height_u8, col_major);
 	let bits = width * height;
 	
 	let full_mask = if bits >= 128 {
@@ -553,24 +555,26 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			
 		}
+		#bitboard_impl_common
 
 		impl #struct_ident {
-			#bitboard_impl_common
 			/// An empty bitboard (all bits cleared).
 			pub const EMPTY: Self = Self(0);
 			/// A full bitboard (all bits set except those outside the board).
 			pub const FULL: Self = Self(#full_mask as #storage_ty);
-			/// Returns an empty bitboard.
-			#[inline(always)]
-			fn new() -> Self {
-				Self::empty()
-			}
 
-			/// Returns an empty bitboard.
+			/// True if the bitboard is empty
 			#[inline(always)]
-			pub const fn empty() -> Self {
-				Self(0)
+			pub const fn is_empty(&self) -> bool {
+				self.0 == 0
 			}
+			
+			/// Returns `true` if any bit is set in the bitboard.
+			#[inline(always)]
+			pub const fn any(&self) -> bool {
+				self.0 != 0
+			}
+			
 			// Construct a Bitboard from its underlying storage representation
 			#[inline(always)]
 			pub const fn from_storage(v: <Self as bitboard::Bitboard>::Storage) -> Self {
@@ -606,141 +610,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			pub const fn set_at_index(&mut self, idx: usize) {
 				self.0 |= 1 << idx;
 			}
-			/// Returns `(x, y)` coordinates corresponding to a linear index `i`.
-			#[inline]
-			pub const fn coords_from_index(i: usize) -> (u8, u8) {
-				if Self::COL_MAJOR {
-					((i / Self::HEIGHT as usize) as u8, (i % Self::HEIGHT as usize) as u8)
-				} else {
-					((i % Self::WIDTH as usize) as u8, (i / Self::WIDTH as usize) as u8)
-				}
-			}
-			/// Returns the linear index corresponding to coordinates `(x, y)`.
-			#[inline]
-			pub const fn index_from_coords(x: u8, y: u8) -> usize {
-				if Self::COL_MAJOR {
-					x as usize * Self::HEIGHT as usize + y as usize
-				} else {
-					y as usize * Self::WIDTH as usize + x as usize
-				}
-			}
-			/// Generates a table of sliding attack bitboards given movement `offsets`.
-			/// Each entry corresponds to attacks from a square in the bitboard.
-			pub fn generate_sliding_attacks_table(offsets: &[(i8, i8)]) -> [#struct_ident; Self::NB_SQUARES] 
-			{
-				let mut attacks = [Self::EMPTY;Self::NB_SQUARES];
-				let mut i = 0;
-				while i < Self::NB_SQUARES {
-					let (x,y) = Self::coords_from_index(i);
-					let mut bb = Self::EMPTY;
-
-					for &(dx, dy) in offsets {
-						let mut nx = x as i8 + dx;
-						let mut ny = y as i8 + dy;
-
-						while nx >= 0 && ny >= 0 &&
-							(nx as u8) < Self::WIDTH as u8 && (ny as u8) < Self::HEIGHT as u8
-						{
-							bb.set_at_index(i);
-
-							nx += dx;
-							ny += dy;
-						}
-					}
-
-					attacks[i] = bb;
-					i += 1;
-				}
-
-				attacks
-			}
 			
-			/// Generates a table of jump attack bitboards given movement `offsets`.
-			/// Each entry corresponds to single-step jumps from a square.
-			pub const fn generate_jump_attacks_table(offsets: &[(i8, i8)]) -> [#struct_ident; Self::NB_SQUARES] {
-				let mut out = [Self::EMPTY;Self::NB_SQUARES];
-
-				let mut i = 0;
-				while i < Self::NB_SQUARES {
-					let (x,y) = Self::coords_from_index(i);
-
-					let mut bb = Self::EMPTY;
-
-					let mut j = 0;
-					while j < offsets.len() {
-						let dx = offsets[j].0;
-						let dy = offsets[j].1;
-
-						let nx = x as i8 + dx;
-						let ny = y as i8 + dy;
-
-						if nx >= 0 && ny >= 0 &&
-						(nx as u8) < Self::WIDTH as u8 &&
-						(ny as u8) < Self::HEIGHT as u8
-						{
-							let dest_index = Self::index_from_coords(nx as u8, ny as u8);
-							bb.set_at_index(dest_index);
-						}
-
-						j += 1;
-					}
-
-					out[i] = bb;
-					i += 1;
-				}
-
-				out
-			}
-
-			/// Generates the full ray-between mask table.
-			pub const fn generate_ray_between_table() -> [[Self; Self::NB_SQUARES]; Self::NB_SQUARES] {
-				let mut table = [[Self::from_storage(0); Self::NB_SQUARES]; Self::NB_SQUARES];
-				let mut from = 0;
-
-				while from < Self::NB_SQUARES {
-					let mut to = 0;
-					while to < Self::NB_SQUARES {
-						table[from][to] = Self::compute_ray_between_mask(from, to);
-						to += 1;
-					}
-					from += 1;
-				}
-
-				table
-			}
-			/// Computes the bitboard mask of all squares strictly between `from` and `to` on the same line.
-			const fn compute_ray_between_mask(from: usize, to: usize) -> Self {
-				let (fx, fy) = Self::coords_from_index(from);
-				let (tx, ty) = Self::coords_from_index(to);
-
-				let same_file = fx == tx;
-				let same_rank = fy == ty;
-				let same_diag = (fx as i8 - fy as i8) == (tx as i8 - ty as i8);
-				let same_anti = (fx as i8 + fy as i8) == (tx as i8 + ty as i8);
-
-				if !(same_file || same_rank || same_diag || same_anti) {
-					return Self::empty();
-				}
-
-				let dx = (tx as i8 - fx as i8).signum();
-				let dy = (ty as i8 - fy as i8).signum();
-
-				let mut x = fx as i8 + dx;
-				let mut y = fy as i8 + dy;
-
-				let mut bb = Self::empty();
-
-				while x != tx as i8 || y != ty as i8 {
-					bb = Self::from_storage(
-						bb.storage() |
-						Self::from_coords(x as u8, y as u8).storage()
-					);
-					x += dx;
-					y += dy;
-				}
-
-				bb
-			}
 		}
 		impl #struct_ident {
 			/// Returns a `Vec` containing all subsets of the current bitboard.
@@ -772,77 +642,6 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 
 				subsets
-			}
-			#[inline]
-			pub const fn has_n_aligned(&self, n: u8) -> bool {
-				if n == 0 { return true; }
-				if n == 1 { return self.0 != 0; }
-
-				self.has_n_aligned_horizontal(n) ||
-					self.has_n_aligned_vertical(n) ||
-					self.has_n_aligned_diag_dec(n) ||
-					self.has_n_aligned_diag_inc(n)
-			}
-			#[inline]
-			pub const fn has_n_aligned_horizontal(&self, n: u8) -> bool {
-				if n == 0 { return true; }
-				if n == 1 { return self.0 != 0; }
-
-				let mut temp = self.0;
-				let mut i=1;
-				while i < n {
-					if !Self::COL_MAJOR {
-						let west_mask = !Self::WEST_BORDER.storage();
-						temp&=(temp&west_mask)>>Self::H_OFFSET;
-					} else {
-						temp &= temp >> Self::H_OFFSET;
-					}
-					i += 1;
-				}
-				temp != 0
-			}
-			#[inline]
-			pub const fn has_n_aligned_vertical(&self, n: u8) -> bool {
-				if n == 0 { return true; }
-				if n == 1 { return self.0 != 0; }
-
-				let mut temp = self.0;
-				let mut i=1;
-				while i < n {
-					if Self::COL_MAJOR {
-						let south_mask = !Self::SOUTH_BORDER.storage();
-						temp&=(temp&south_mask)>>Self::V_OFFSET;
-					} else {
-						temp &= temp >> Self::V_OFFSET;
-					}
-					i += 1;
-				}
-				temp != 0
-			}
-			#[inline]
-			pub const fn has_n_aligned_diag_dec(&self, n: u8) -> bool {
-				if n <= 1 { return n == 1 && self.0 != 0 || n == 0; }
-				let mut temp = self.0;
-				let mut i = 1;
-				let mask = !Self::EAST_BORDER.storage();
-				while i < n {
-					temp &= (temp & mask) >> Self::DIAG_DEC_OFFSET;
-					i += 1;
-				}
-				temp != 0
-			}
-
-			#[inline]
-			pub const fn has_n_aligned_diag_inc(&self, n: u8) -> bool {
-				if n <= 1 { return n == 1 && self.0 != 0 || n == 0; }
-				let mut temp = self.0;
-				let mut i = 1;
-				let mask = !Self::WEST_BORDER.storage();
-				while i < n {
-					temp &= (temp & mask) >> Self::DIAG_INC_OFFSET;
-					i += 1;
-				}
-				temp != 0
 			}
 		}
 		impl #struct_ident {
@@ -1663,7 +1462,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			
 			fn pext(&self, mask: &Self) -> Self::Storage {
-				let mut out = [0;#array_bytes];
+				let mut out = [0;#array_len];
 				let mut current: u64 = 0;
 				let mut bitpos = 0;
 				let mut out_index = 0;
@@ -1695,7 +1494,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			
 			fn pdep(&self, compressed: Self::Storage) -> Self {
-				let mut out = [0;#array_bytes];
+				let mut out = [0;#array_len];
 				
 				let mut src_word_index = 0;
 				let mut src_bit_index = 0;
@@ -1751,21 +1550,40 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				*self |= new_row;
 			}
 		}
+		#bitboard_impl_common
 		impl #struct_ident {
 
-			#bitboard_impl_common
-			pub const ARRAY_LEN: usize = #array_bytes;
-			pub const EMPTY: Self = Self([0;#array_bytes]);
-			pub const FULL: Self = Self([0xFFFFFFFF;#array_bytes]);
+			pub const ARRAY_LEN: usize = #array_len;
+			pub const EMPTY: Self = Self([0;#array_len]);
+			//TODO: remove excedent bits
+			pub const FULL: Self = Self([0xFFFFFFFFFFFFFFFF;#array_len]);
+			pub const WEST_BORDER: Self = Self::col_mask(0);
+			pub const SOUTH_BORDER: Self = Self::row_mask(0);
+			pub const NORTH_BORDER: Self = Self::row_mask(Self::WIDTH-1);
+			pub const EAST_BORDER: Self = Self::col_mask(Self::HEIGHT-1);
+
 			#[inline]
-			pub const fn new() -> Self {
-				Self::empty()
+			pub const fn is_empty(&self) -> bool {
+				let mut i=0;
+				while i < self.0.len() {
+					if self.0[i] != 0 {
+						return false;
+					}
+					i+=1;
+				}
+				true
 			}
 			#[inline]
-			pub const fn empty() -> Self {
-				Self([0;#array_bytes])
+			pub const fn any(&self) -> bool {
+				let mut i=0;
+				while i < self.0.len() {
+					if self.0[i] != 0 {
+						return true;
+					}
+					i+=1;
+				}
+				false
 			}
-			
 			/// Construct a Bitboard from its storage representation
 			#[inline]
 			pub const fn from_storage(v: <Self as bitboard::Bitboard>::Storage) -> Self {
@@ -1845,25 +1663,6 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				let idx = Self::index_from_coords(x, y);
 				self.reset_at_index(idx)
 			}
-			/// Get the bit index from (x, y)
-			#[inline]
-			pub const fn index_from_coords(x: u8, y: u8) -> usize {
-				if Self::COL_MAJOR {
-					x as usize * Self::HEIGHT as usize + y as usize
-				} else {
-					y as usize * Self::WIDTH as usize + x as usize
-				}
-			}
-
-			/// Get the (x, y) coords from bit index 
-			#[inline]
-			pub const fn coords_from_index(i: usize) -> (u8, u8) {
-				if Self::COL_MAJOR {
-					((i / Self::HEIGHT as usize) as u8, (i % Self::HEIGHT as usize) as u8)
-				} else {
-					((i % Self::WIDTH as usize) as u8, (i / Self::WIDTH as usize) as u8)
-				}
-			}
 
 			/// Check (x, y) is inside the bitboard
 			#[inline]
@@ -1877,55 +1676,40 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 
 			#[inline(always)]
-			pub fn row_mask(y: u8) -> Self {
-				if Self::COL_MAJOR {
-					//TODO: WEST_BORDER compute
-					let nb_bits = Self::WIDTH as usize * Self::HEIGHT as usize;
-					let nb_words = (nb_bits + 63) / 64;
-					
-					let mut bits = [0;#array_bytes];
-					
-					for y in 0..Self::HEIGHT {
-						let idx = y as usize * Self::WIDTH as usize;
-						let word = idx / 64;
-						let bit  = idx % 64;
-						
-						bits[word] |= 1u64 << bit;
-					}
-					Self::from_storage(bits) << y
-				} else {
+			pub const fn row_mask(y: u8) -> Self {
+				if !Self::COL_MAJOR {
 					let mut row = Self::empty();
-					row.0[0]=1;
-					row <<= Self::WIDTH as usize;
-					row -= 1;
-					row <<= y as usize * Self::WIDTH as usize;
-					row
+					row.0[0] = 1;
+					let row_bits = row.shl_const(Self::WIDTH as usize).sub_const(1);
+					row_bits.shl_const(y as usize * Self::WIDTH as usize)
+				} else {
+					let mut bits = [0u64; #array_len];
+					let mut x = 0;
+					while x < Self::WIDTH {
+						let idx = x as usize * Self::HEIGHT as usize;
+						bits[idx / 64] |= 1u64 << (idx % 64);
+						x += 1;
+					}
+					Self(bits).shl_const(y as usize)
 				}
 			}
+
 			#[inline(always)]
-			pub fn col_mask(x: u8) -> Self {
+			pub const fn col_mask(x: u8) -> Self {
 				if Self::COL_MAJOR {
 					let mut col = Self::empty();
-					col.0[0]=1;
-					col <<= Self::HEIGHT as usize;
-					col -= 1;
-					col <<= x as usize * Self::HEIGHT as usize;
-					col
+					col.0[0] = 1;
+					let col_bits = col.shl_const(Self::HEIGHT as usize).sub_const(1);
+					col_bits.shl_const(x as usize * Self::HEIGHT as usize)
 				} else {
-					//TODO: WEST_BORDER compute
-					let nb_bits = Self::WIDTH as usize * Self::HEIGHT as usize;
-					let nb_words = (nb_bits + 63) / 64;
-					
-					let mut bits = [0;#array_bytes];
-					
-					for y in 0..Self::HEIGHT {
+					let mut bits = [0u64; #array_len];
+					let mut y = 0;
+					while y < Self::HEIGHT {
 						let idx = y as usize * Self::WIDTH as usize;
-						let word = idx / 64;
-						let bit  = idx % 64;
-						
-						bits[word] |= 1u64 << bit;
+						bits[idx / 64] |= 1u64 << (idx % 64);
+						y += 1;
 					}
-					Self::from_storage(bits) << x
+					Self(bits).shl_const(x as usize)
 				}
 			}
 		}

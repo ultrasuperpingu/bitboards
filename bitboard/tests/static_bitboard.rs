@@ -46,25 +46,34 @@ bitboard_table!(NEIGHBORS_8, neighbors_8, neighbors_8_mask, Bitboard10x10, Bitbo
 #[derive(Default, BitboardDebug, BitboardDisplay)]
 struct Test;
 
-
-//impl Test {
-//    pub const fn has_alignment_h<const N: usize>(&self) -> bool { ... }
-//    pub const fn has_alignment_v<const N: usize>(&self) -> bool { ... }
-//    pub const fn has_alignment_diag_inc<const N: usize>(&self) -> bool { ... }
-//    pub const fn has_alignment_diag_dec<const N: usize>(&self) -> bool { ... }
-//
-//    pub const fn has_alignment<const N: usize>(&self) -> bool {
-//        self.has_alignment_h::<N>()
-//            || self.has_alignment_v::<N>()
-//            || self.has_alignment_diag_inc::<N>()
-//            || self.has_alignment_diag_dec::<N>()
-//    }
-//}
 #[bitboard(width=15,height=80, col_major=true)]
 #[derive(BitboardDebug, BitboardDisplay)]
 struct Test2;
 
+#[bitboard(width=12,height=12, col_major=true)]
+#[derive(BitboardDebug, BitboardDisplay)]
+struct Bitboard12x12;
 
+#[test]
+fn test_array_bitboard() {
+	let test = Bitboard12x12::WEST_BORDER;
+	println!("{}", test);
+	let test = Bitboard12x12::SOUTH_BORDER;
+	println!("{}", test);
+	let test = Bitboard12x12::NORTH_BORDER;
+	println!("{}", test);
+	let test = Bitboard12x12::EAST_BORDER;
+	println!("{}", test);
+	assert!(test.has_n_aligned(12));
+	assert!(!test.has_n_aligned_horizontal(12));
+	assert!(!test.has_n_aligned_diag_dec(12));
+	assert!(!test.has_n_aligned_diag_inc(12));
+	assert!(!test.has_n_aligned(13));
+	assert!(!Bitboard12x12::EMPTY.has_n_aligned(1));
+	assert!((Bitboard12x12::from_index(0)|Bitboard12x12::from_index(1)).has_n_aligned(2));
+	assert!(!(Bitboard12x12::from_index(0)|Bitboard12x12::from_index(1)).has_n_aligned(3));
+
+}
 #[test]
 fn test_display() {
 	let test=Test::default();
@@ -405,4 +414,3 @@ fn test_bitboard10x10() {
 	let test = Bitboard10x10::FULL;
 	println!("{}", test.ray_ne(Bitboard10x10::index_from_coords(3, 7)));
 }
-
