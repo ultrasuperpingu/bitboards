@@ -52,7 +52,250 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 					y as usize * Self::WIDTH as usize + x as usize
 				}
 			}
-			
+			/// Computes the orthogonal neighbors (N, S, E, W) of the square at `index`.
+			#[inline]
+			pub const fn compute_neighbors_ortho_mask(index: usize) -> Self {
+				let (x, y) = Self::coords_from_index(index);
+				let mut bb = Self::EMPTY;
+
+				if x > 0 {
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x - 1, y)));
+				}
+				if x + 1 < Self::WIDTH {
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x + 1, y)));
+				}
+				if y > 0 {
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x, y - 1)));
+				}
+				if y + 1 < Self::HEIGHT {
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x, y + 1)));
+				}
+
+				bb
+			}
+			/// Generates a table of orthogonal neighbors for all squares.
+			pub const fn generate_neighbors_ortho_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_neighbors_ortho_mask(i);
+					i += 1;
+				}
+				arr
+			}
+			/// Computes the diagonal neighbors (NW, NE, SW, SE) of the square at `index`.
+			#[inline]
+			pub const fn compute_neighbors_diag_mask(index: usize) -> Self {
+				let (x, y) = Self::coords_from_index(index);
+				let mut bb = Self::EMPTY;
+
+				// NW
+				if x > 0 && y + 1 < Self::HEIGHT {
+					let idx = Self::index_from_coords(x - 1, y + 1);
+					bb = bb.or_const(&Self::from_index(idx));
+				}
+
+				// NE
+				if x + 1 < Self::WIDTH && y + 1 < Self::HEIGHT {
+					let idx = Self::index_from_coords(x + 1, y + 1);
+					bb = bb.or_const(&Self::from_index(idx));
+				}
+
+				// SW
+				if x > 0 && y > 0 {
+					let idx = Self::index_from_coords(x - 1, y - 1);
+					bb = bb.or_const(&Self::from_index(idx));
+				}
+
+				// SE
+				if x + 1 < Self::WIDTH && y > 0 {
+					let idx = Self::index_from_coords(x + 1, y - 1);
+					bb = bb.or_const(&Self::from_index(idx));
+				}
+
+				bb
+			}
+			/// Generates a table of diagonal neighbors for all squares.
+			pub const fn generate_neighbors_diag_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_neighbors_diag_mask(i);
+					i += 1;
+				}
+				arr
+			}
+			/// Computes all 8 neighbors (orthogonal + diagonal) for a given square.
+			#[inline]
+			pub const fn compute_neighbors_8_mask(index: usize) -> Self {
+				let ortho = Self::compute_neighbors_ortho_mask(index);
+				let diag  = Self::compute_neighbors_diag_mask(index);
+				ortho.or_const(&diag)
+			}
+			/// Generates a table of all 8 neighbors for all squares.
+			pub const fn generate_neighbors_8_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_neighbors_8_mask(i);
+					i += 1;
+				}
+				arr
+			}
+			/// Computes a ray from `index` in direction `(dx, dy)` until board edge.
+			#[inline]
+			const fn compute_ray_mask(index: usize, dx: isize, dy: isize) -> Self {
+				let (mut x, mut y) = Self::coords_from_index(index);
+				let mut bb = Self::EMPTY;
+
+				loop {
+					let nx = x as isize + dx;
+					let ny = y as isize + dy;
+
+					if nx < 0 || ny < 0 {
+						break;
+					}
+					if nx >= Self::WIDTH as isize || ny >= Self::HEIGHT as isize {
+						break;
+					}
+
+					x = nx as u8;
+					y = ny as u8;
+
+					let idx = Self::index_from_coords(x, y);
+					bb = bb.or_const(&Self::from_index(idx));
+				}
+
+				bb
+			}
+			/// Computes a ray from `index` in north direction until board edge.
+			#[inline]
+			pub const fn compute_ray_n_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, 0, 1)
+			}
+			/// Generates a table of north ray for all squares.
+			pub const fn generate_ray_n_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_n_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+
+			/// Computes a ray from `index` in south direction until board edge.
+			#[inline]
+			pub const fn compute_ray_s_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, 0, -1)
+			}
+			/// Generates a table of south ray for all squares.
+			pub const fn generate_ray_s_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_s_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes a ray from `index` in east direction until board edge.
+			#[inline]
+			pub const fn compute_ray_e_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, 1, 0)
+			}
+			/// Generates a table of east ray for all squares.
+			pub const fn generate_ray_e_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_e_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes a ray from `index` in west direction until board edge.
+			#[inline]
+			pub const fn compute_ray_w_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, -1, 0)
+			}
+			/// Generates a table of west ray for all squares.
+			pub const fn generate_ray_w_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_w_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes a ray from `index` in north-east direction until board edge.
+			#[inline]
+			pub const fn compute_ray_ne_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, 1, 1)
+			}
+			/// Generates a table of north-east ray for all squares.
+			pub const fn generate_ray_ne_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_ne_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes a ray from `index` in north-west direction until board edge.
+			#[inline]
+			pub const fn compute_ray_nw_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, -1, 1)
+			}
+			/// Generates a table of north-west ray for all squares.
+			pub const fn generate_ray_nw_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_nw_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes a ray from `index` in south-east direction until board edge.
+			#[inline]
+			pub const fn compute_ray_se_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, 1, -1)
+			}
+			/// Generates a table of south-east ray for all squares.
+			pub const fn generate_ray_se_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_se_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes a ray from `index` in south-west direction until board edge.
+			#[inline]
+			pub const fn compute_ray_sw_mask(index: usize) -> Self {
+				Self::compute_ray_mask(index, -1, -1)
+			}
+			/// Generates a table of south-west ray for all squares.
+			pub const fn generate_ray_sw_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_ray_sw_mask(i);
+					i += 1;
+				}
+				arr
+			}
 			/// Generates a table of sliding attack bitboards given movement `offsets`.
 			/// Each entry corresponds to attacks from a square in the bitboard.
 			pub fn generate_sliding_attacks_table(offsets: &[(i8, i8)]) -> [#ident; Self::NB_SQUARES] 
@@ -136,6 +379,87 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				}
 
 				table
+			}
+			
+			/// Computes ascending diagonal mask (bottom-left → top-right) for square at `index`.
+			#[inline(always)]
+			pub const fn compute_diag_inc_mask(index: usize) -> Self {
+				let (x0, y0) = Self::coords_from_index(index);
+				let mut bb = Self::EMPTY;
+
+				let mut x = x0+1;
+				let mut y = y0+1;
+				loop {
+					if x >= Self::WIDTH || y >= Self::HEIGHT {
+						break;
+					}
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x, y)));
+
+					x += 1;
+					y += 1;
+				}
+				let mut x = x0;
+				let mut y = y0;
+				loop {
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x, y)));
+
+					if x == 0 || y == 0 {
+						break;
+					}
+					x -= 1;
+					y -= 1;
+				}
+				bb
+			}
+
+			pub const fn generate_diag_inc_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_diag_inc_mask(i);
+					i += 1;
+				}
+				arr
+			}
+
+			/// Computes descending diagonal mask (top-left → bottom-right) for square at `index`.
+			#[inline(always)]
+			pub const fn compute_diag_dec_mask(index: usize) -> Self {
+				let (x0, y0) = Self::coords_from_index(index);
+				let mut bb = Self::EMPTY;
+
+				let mut x = x0 as i16 + 1;
+				let mut y = y0 as i16 - 1;
+				loop {
+					if x >= Self::WIDTH as i16 || y < 0 {
+						break;
+					}
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x as u8, y as u8)));
+
+					x += 1;
+					y -= 1;
+				}
+				let mut x = x0 as i16;
+				let mut y = y0 as i16;
+				loop {
+					if x < 0 || y >= Self::HEIGHT as i16 {
+						break;
+					}
+					bb = bb.or_const(&Self::from_index(Self::index_from_coords(x as u8, y as u8)));
+
+					x -= 1;
+					y += 1;
+				}
+				bb
+			}
+			pub const fn generate_diag_dec_table() -> [Self; Self::NB_SQUARES] {
+				let mut arr = [Self::EMPTY; Self::NB_SQUARES];
+				let mut i = 0;
+				while i < Self::NB_SQUARES {
+					arr[i] = Self::compute_diag_dec_mask(i);
+					i += 1;
+				}
+				arr
 			}
 			/// Computes the bitboard mask of all squares strictly between `from` and `to` on the same line.
 			const fn compute_ray_between_mask(from: usize, to: usize) -> Self {
