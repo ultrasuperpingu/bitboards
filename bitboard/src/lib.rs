@@ -201,18 +201,18 @@ impl<T> Pdep<T> for T::Storage
 	}
 }
 pub trait BitIter: Bitboard+Sized
-	where <Self as Bitboard>::Storage: BitStorage
+//where <Self as Bitboard>::Storage: BitStorage
 {
 	fn iter_bits(self) -> BitIterator<Self>;
 }
 pub struct BitIterator<B: Bitboard>
-where <B as Bitboard>::Storage: BitStorage
+//where <B as Bitboard>::Storage: BitStorage
 {
 	bb: B,
 }
 
 impl<B: Bitboard> Iterator for BitIterator<B>
-where <B as Bitboard>::Storage: BitStorage
+//where <B as Bitboard>::Storage: BitStorage
 {
 	type Item = u32;
 
@@ -226,27 +226,13 @@ where <B as Bitboard>::Storage: BitStorage
 	}
 }
 impl<B: Bitboard> BitIter for B
-where <B as Bitboard>::Storage: BitStorage
+//where <B as Bitboard>::Storage: BitStorage
 {
 	#[inline]
 	fn iter_bits(self) -> BitIterator<Self> {
 		BitIterator { bb: self }
 	}
 }
-
-//impl #struct_ident {
-//    pub const fn has_alignment_h<const N: usize>(&self) -> bool { ... }
-//    pub const fn has_alignment_v<const N: usize>(&self) -> bool { ... }
-//    pub const fn has_alignment_diag_inc<const N: usize>(&self) -> bool { ... }
-//    pub const fn has_alignment_diag_dec<const N: usize>(&self) -> bool { ... }
-//
-//    pub const fn has_alignment<const N: usize>(&self) -> bool {
-//        self.has_alignment_h::<N>()
-//            || self.has_alignment_v::<N>()
-//            || self.has_alignment_diag_inc::<N>()
-//            || self.has_alignment_diag_dec::<N>()
-//    }
-//}
 
 
 pub fn fmt_bitboard_display<B: Bitboard>(b: &B, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -66,11 +66,10 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 		impl #ident {
 			pub const fn shl_const(&self, rhs: usize) -> Self {
 				if rhs == 0 { return Self(self.0); }
-				let n = self.0.len();
-				let word_shift = rhs / 64;
-				let bit_shift = (rhs % 64) as u32;
+				let word_shift = rhs / u64::BITS as usize;
+				let bit_shift = (rhs % u64::BITS as usize) as u32;
 
-				if word_shift >= n {
+				if word_shift >= Self::ARRAY_LEN {
 					return Self([0u64; Self::ARRAY_LEN]);
 				}
 
@@ -78,14 +77,14 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				
 				if bit_shift == 0 {
 					let mut i = word_shift;
-					while i < n {
+					while i < Self::ARRAY_LEN {
 						res[i] = self.0[i - word_shift];
 						i += 1;
 					}
 				} else {
-					let mut i = n - 1;
+					let mut i = Self::ARRAY_LEN - 1;
 					while i > word_shift {
-						res[i] = (self.0[i - word_shift] << bit_shift) | (self.0[i - word_shift - 1] >> (64 - bit_shift));
+						res[i] = (self.0[i - word_shift] << bit_shift) | (self.0[i - word_shift - 1] >> (u64::BITS - bit_shift));
 						i -= 1;
 					}
 					res[word_shift] = self.0[0] << bit_shift;
@@ -95,11 +94,10 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 
 			pub const fn shr_const(&self, rhs: usize) -> Self {
 				if rhs == 0 { return Self(self.0); }
-				let n = self.0.len();
-				let word_shift = rhs / 64;
-				let bit_shift = (rhs % 64) as u32;
+				let word_shift = rhs / u64::BITS as usize;
+				let bit_shift = (rhs % u64::BITS as usize) as u32;
 
-				if word_shift >= n {
+				if word_shift >= Self::ARRAY_LEN {
 					return Self([0u64; Self::ARRAY_LEN]);
 				}
 
@@ -107,17 +105,17 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 
 				if bit_shift == 0 {
 					let mut i = 0;
-					while i < n - word_shift {
+					while i < Self::ARRAY_LEN - word_shift {
 						res[i] = self.0[i + word_shift];
 						i += 1;
 					}
 				} else {
 					let mut i = 0;
-					while i < n - word_shift - 1 {
-						res[i] = (self.0[i + word_shift] >> bit_shift) | (self.0[i + word_shift + 1] << (64 - bit_shift));
+					while i < Self::ARRAY_LEN - word_shift - 1 {
+						res[i] = (self.0[i + word_shift] >> bit_shift) | (self.0[i + word_shift + 1] << (u64::BITS - bit_shift));
 						i += 1;
 					}
-					res[n - word_shift - 1] = self.0[n - 1] >> bit_shift;
+					res[Self::ARRAY_LEN - word_shift - 1] = self.0[Self::ARRAY_LEN - 1] >> bit_shift;
 				}
 				Self(res)
 			}

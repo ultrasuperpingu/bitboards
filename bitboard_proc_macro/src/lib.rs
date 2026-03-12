@@ -574,7 +574,11 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			pub const fn any(&self) -> bool {
 				self.0 != 0
 			}
-			
+			/// The number of bits set to one.
+			#[inline(always)]
+			const fn count(&self) -> u32 {
+				self.0.count_ones()
+			}
 			// Construct a Bitboard from its underlying storage representation
 			#[inline(always)]
 			pub const fn from_storage(v: <Self as bitboard::Bitboard>::Storage) -> Self {
@@ -1106,6 +1110,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				for b in a.iter_mut() {
 					*b=!(*b);
 				}
+				a[Self::ARRAY_LEN-1]&=Self::FULL.0[Self::ARRAY_LEN-1];
 				Self(a)
 			}
 			#[inline]
@@ -1231,8 +1236,16 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 			pub const ARRAY_LEN: usize = #array_len;
 			pub const EMPTY: Self = Self([0;#array_len]);
-			//TODO: remove excedent bits
-			pub const FULL: Self = Self([0xFFFFFFFFFFFFFFFF;#array_len]);
+			pub const FULL: Self = {
+				let mut data = [0xFFFFFFFFFFFFFFFF; #array_len];
+				
+				let remaining_bits = (#width * #height) % 64;
+				if remaining_bits != 0 {
+					let mask = (1 << remaining_bits) - 1;
+					data[#array_len - 1] &= mask;
+				}
+				Self(data)
+			};
 			pub const WEST_BORDER: Self = Self::col_mask(0);
 			pub const SOUTH_BORDER: Self = Self::row_mask(0);
 			pub const NORTH_BORDER: Self = Self::row_mask(Self::WIDTH-1);

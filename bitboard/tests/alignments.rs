@@ -84,8 +84,6 @@ mod tests_8x8 {
 	use bitboard::Bitboard;
 	use bitboard_proc_macro::{BitboardDebug, BitboardDisplay, bitboard};
 
-	use crate::tests::Bitboard7x7Col;
-
 	#[bitboard(width=8,height=8, col_major=false)]
 	#[derive(Default, BitboardDebug, BitboardDisplay, Hash)]
 	pub struct Bitboard8x8;
@@ -102,71 +100,152 @@ mod tests_8x8 {
 
 	#[test]
 	fn test_8x8_vertical() {
-		println!("Bitboard7x7Col::H_OFFSET: {}", Bitboard7x7Col::H_OFFSET);
-		println!("Bitboard7x7Col::V_OFFSET: {}", Bitboard7x7Col::V_OFFSET);
-		println!("Bitboard7x7Col::DIAG_DEC_OFFSET: {}", Bitboard7x7Col::DIAG_DEC_OFFSET);
-		println!("Bitboard7x7Col::DIAG_INC_OFFSET: {}", Bitboard7x7Col::DIAG_INC_OFFSET);
 		println!("Bitboard8x8::H_OFFSET: {}", Bitboard8x8::H_OFFSET);
 		println!("Bitboard8x8::V_OFFSET: {}", Bitboard8x8::V_OFFSET);
 		println!("Bitboard8x8::DIAG_DEC_OFFSET: {}", Bitboard8x8::DIAG_DEC_OFFSET);
 		println!("Bitboard8x8::DIAG_INC_OFFSET: {}", Bitboard8x8::DIAG_INC_OFFSET);
-		// En Col Major 8x8, la ligne 0 est : 0, 8, 16, 24, 32, 40, 48, 56
 		let bb = from_indices(&[0, 8, 16, 24, 32]);
 		println!("{bb}");
-		assert!(bb.has_n_aligned_vertical(5), "Horizontal 5-align non détecté");
+		assert!(bb.has_n_aligned_vertical(5), "Vertical 5-align not detected");
 		
 		let bb = from_indices(&[24, 32, 40, 48, 56]);
 		println!("{bb}");
-		assert!(bb.has_n_aligned(5), "Horizontal 5-align non détecté");
+		assert!(bb.has_n_aligned(5), "Vertical 5-align not detected");
 
 		let bb = from_indices(&[0+7, 8+7, 16+7, 24+7, 32+7]);
 		println!("{bb}");
-		assert!(bb.has_n_aligned_vertical(5), "Horizontal 5-align non détecté");
+		assert!(bb.has_n_aligned_vertical(5), "Vertical 5-align not detected");
 		
 		let bb = from_indices(&[24+7, 32+7, 40+7, 48+7, 56+7]);
 		println!("{bb}");
-		assert!(bb.has_n_aligned(5), "Horizontal 5-align non détecté");
+		assert!(bb.has_n_aligned(5), "Vertical 5-align not detected");
 
-		// Test bleeding horizontal : fin de ligne 0 (index 56) vers début ligne 1 (index 1)
-		// (Note: l'index dépend de si tu as une ligne sentinelle ou pas, ici on teste pur 8x8)
 		let bleed = from_indices(&[40, 48, 56, 1]); 
-		assert!(!bleed.has_n_aligned(4), "Bleeding horizontal détecté sur 8x8");
+		assert!(!bleed.has_n_aligned(4), "Vertical bleeding");
 	}
 
 	#[test]
 	fn test_8x8_horizontal() {
 		// Colonne 0 : 0, 1, 2, 3...
 		let bb = from_indices(&[10, 11, 12, 13]);
-		assert!(bb.has_n_aligned_horizontal(4), "Vertical 4-align non détecté");
+		assert!(bb.has_n_aligned_horizontal(4), "Horizontal 4-align not detected");
 
-		// Test bleeding vertical : haut d'une colonne (7) vers bas de la suivante (8)
 		let bleed = from_indices(&[6, 7, 8, 9]);
-		assert!(!bleed.has_n_aligned_horizontal(4), "Bleeding vertical détecté sur 8x8");
+		assert!(!bleed.has_n_aligned_horizontal(4), "Bleeding Horizontal");
 	}
 
 	#[test]
 	fn test_8x8_diagonals() {
-		// INC (/) : +1 col (+8), +1 row (+1) = Offset 9
-		// Ex: 0, 9, 18, 27
 		let bb_inc = from_indices(&[0, 9, 18, 27]);
 		println!("{}", bb_inc);
-		assert!(bb_inc.has_n_aligned(4), "Diagonale INC (/) non détectée");
+		assert!(bb_inc.has_n_aligned_diag_inc(4), "Diagonal INC (/) not detected");
+		assert!(!bb_inc.has_n_aligned_diag_dec(4), "Diagonal DEC (\\) incorrectly detected");
 
-		// DEC (\) : +1 col (+8), -1 row (-1) = Offset 7
-		// Ex: 7, 14, 21, 28
 		let bb_dec = from_indices(&[7, 14, 21, 28]);
 		println!("{}", bb_dec);
-		assert!(bb_dec.has_n_aligned(4), "Diagonale DEC (\\) non détectée");
+		assert!(bb_dec.has_n_aligned_diag_dec(4), "Diagonal DEC (\\) not detected");
+		assert!(!bb_dec.has_n_aligned_diag_inc(4), "Diagonal INC (/) incorrectly detected");
 	}
 
 	#[test]
 	fn test_8x8_edge_cases() {
-		// Test du carré 2x2 (ne doit pas être vu comme un 4-align par erreur)
 		let bb = from_indices(&[0, 1, 8, 9]);
-		assert!(!bb.has_n_aligned(4), "Faux positif sur un carré 2x2");
+		assert!(!bb.has_n_aligned(4), "4-alignment detected on a 2x2 square");
 
-		// Ligne complète de 8
 		let full_row = from_indices(&[0, 8, 16, 24, 32, 40, 48, 56]);
 		assert!(full_row.has_n_aligned(8));
+		assert!(!full_row.has_n_aligned(9));
+	}
+}
+
+
+#[cfg(test)]
+mod tests_goban {
+	use bitboard_proc_macro::{BitboardDebug, BitboardDisplay, bitboard};
+
+	#[bitboard(width=19,height=19, col_major=true)]
+	#[derive(Default, BitboardDebug, BitboardDisplay, Hash)]
+	pub struct GobanCol;
+
+	#[bitboard(width=19,height=19, col_major=false)]
+	#[derive(Default, BitboardDebug, BitboardDisplay, Hash)]
+	pub struct Goban;
+	
+
+
+	fn from_indices(indices: &[u16]) -> Goban {
+		let mut bb = Goban::empty();
+		for &i in indices {
+			bb.set_at_index(i as usize);
+		}
+		bb
+	}
+
+	#[test]
+	fn test_goban_vertical() {
+		println!("GobanCol::H_OFFSET: {}", GobanCol::H_OFFSET);
+		println!("GobanCol::V_OFFSET: {}", GobanCol::V_OFFSET);
+		println!("GobanCol::DIAG_DEC_OFFSET: {}", GobanCol::DIAG_DEC_OFFSET);
+		println!("GobanCol::DIAG_INC_OFFSET: {}", GobanCol::DIAG_INC_OFFSET);
+		println!("Goban::H_OFFSET: {}", Goban::H_OFFSET);
+		println!("Goban::V_OFFSET: {}", Goban::V_OFFSET);
+		println!("Goban::DIAG_DEC_OFFSET: {}", Goban::DIAG_DEC_OFFSET);
+		println!("Goban::DIAG_INC_OFFSET: {}", Goban::DIAG_INC_OFFSET);
+		let bb = from_indices(&[0, 19, 19*2, 19*3, 19*4]);
+		println!("{bb}");
+		assert!(bb.has_n_aligned_vertical(5), "Vertical 5-align not detected");
+		
+		let bb = from_indices(&[9, 9+19, 9+19*2, 9+19*3, 9+19*4]);
+		println!("{bb}");
+		assert!(bb.has_n_aligned(5), "Vertical 5-align not detected");
+
+		let bb = from_indices(&[18, 18+19, 18+19*2, 18+19*3, 18+19*4]);
+		println!("{bb}");
+		assert!(bb.has_n_aligned_vertical(5), "Vertical 5-align not detected");
+		
+		let bb = from_indices(&[100, 100+19, 100+19*2, 100+19*3, 100+19*4]);
+		println!("{bb}");
+		assert!(bb.has_n_aligned(5), "Vertical 5-align not detected");
+
+		let bleed = from_indices(&[360, 360-19, 360-2*19, 18]); 
+		println!("{bleed}");
+		assert!(!bleed.has_n_aligned(4), "Vertical bleeding");
+	}
+
+	#[test]
+	fn test_goban_horizontal() {
+		// Colonne 0 : 0, 1, 2, 3...
+		let bb = from_indices(&[10, 11, 12, 13]);
+		assert!(bb.has_n_aligned_horizontal(4), "Horizontal 4-align not detected");
+
+		let bleed = from_indices(&[16, 17, 18, 19]);
+		assert!(!bleed.has_n_aligned_horizontal(4), "Bleeding horizontal not detected");
+	}
+
+	#[test]
+	fn test_goban_diagonals() {
+		let bb_inc = from_indices(&[0, 20, 40, 60]);
+		println!("{}", bb_inc);
+		assert!(bb_inc.has_n_aligned_diag_inc(4), "Diagonal INC (/) not detected");
+		assert!(!bb_inc.has_n_aligned_diag_dec(4), "Diagonal DEC (\\) incorrectly detected");
+
+		let bb_dec = from_indices(&[7, 7+18, 7+2*18, 7+3*18]);
+		println!("{}", bb_dec);
+		assert!(bb_dec.has_n_aligned_diag_dec(4), "Diagonal DEC (\\) not detected");
+		assert!(!bb_dec.has_n_aligned_diag_inc(4), "Diagonal INC (/) incorrectly detected");
+	}
+
+	#[test]
+	fn test_goban_edge_cases() {
+		let bb = from_indices(&[0, 1, 19, 20]);
+		assert!(!bb.has_n_aligned(4), "4-alignment detected on a 2x2 square");
+
+		let full_col = Goban::WEST_BORDER;
+		assert!(full_col.has_n_aligned(19));
+		assert!(!full_col.has_n_aligned(20));
+		assert!(Goban::FULL.has_n_aligned(19));
+		assert!(!Goban::FULL.has_n_aligned(20));
+		assert!(Goban::EMPTY.has_n_aligned(0));
+		assert!(!Goban::EMPTY.has_n_aligned(1));
 	}
 }
