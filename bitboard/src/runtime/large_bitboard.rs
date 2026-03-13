@@ -450,6 +450,8 @@ impl std::ops::BitXorAssign<&Self> for LargeBitboard {
 		for (a, b) in self.bits.iter_mut().zip(rhs.bits.iter()) {
 			*a ^= *b;
 		}
+		//maybe one day
+		//std::simd::Simd::<u64,8>::from_slice(&self.bits);
 	}
 }
 impl std::ops::BitAndAssign for LargeBitboard {

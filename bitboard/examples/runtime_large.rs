@@ -29,7 +29,7 @@ fn main() {
 
 
 	let row_bits = bb.full_with_same_shape().extract_row(4);
-	bb.insert_row(5, row_bits);
-	println!("After inserting row 4 into row 5:");
+	bb.insert_col(5, row_bits);
+	println!("After inserting row 4 into col 5:");
 	println!("{}", bb);
 }
