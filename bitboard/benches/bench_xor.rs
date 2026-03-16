@@ -15,7 +15,7 @@ fn xor_scalar_zip(a: &mut [u64], b: &[u64]) {
 	}
 }
 
-// Tes fonctions SIMD
+
 #[target_feature(enable = "avx2")]
 #[inline(never)]
 unsafe fn xor_avx2(a: &mut [u64], b: &[u64]) { unsafe {

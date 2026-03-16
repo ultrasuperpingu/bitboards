@@ -143,7 +143,7 @@ pub trait Bitboard : Clone + PartialEq
 	/// Returns the bit at the given linear index.
 	fn get_at_index(&self, index:usize) -> bool;
 	/// Sets the bit value at the given linear index.
-	fn set_value_at_index(&mut self, index:usize, val: bool);
+	fn assign_at_index(&mut self, index:usize, val: bool);
 	/// Sets the bit to 1 at the given linear index.
 	fn set_at_index(&mut self, idx: usize);
 	/// Sets the bit to 0 at the given linear index.
@@ -154,7 +154,7 @@ pub trait Bitboard : Clone + PartialEq
 	/// Returns the bit at coordinates `(x, y)`.
 	fn get(&self, x: u8, y: u8) -> bool;
 	/// Sets the bit value at coordinates `(x, y)`.
-	fn set_value(&mut self, x: u8, y: u8, val: bool);
+	fn assign(&mut self, x: u8, y: u8, val: bool);
 	/// Sets the bit to 1 at coordinates `(x, y)`.
 	fn set(&mut self, x: u8, y: u8);
 	/// Sets the bit to 0 at coordinates `(x, y)`.

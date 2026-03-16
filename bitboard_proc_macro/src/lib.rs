@@ -477,7 +477,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			/// Sets or clears the bit at the given linear `idx` according to `val`.
 			#[inline(always)]
-			fn set_value_at_index(&mut self, idx: usize, val: bool) {
+			fn assign_at_index(&mut self, idx: usize, val: bool) {
 				if val {
 					self.0 |= 1 << idx;
 				} else {
@@ -497,9 +497,9 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			/// Sets or clears the bit at coordinates `(x, y)` according to `val`.
 			#[inline(always)]
-			fn set_value(&mut self, x: u8, y: u8, val: bool) {
+			fn assign(&mut self, x: u8, y: u8, val: bool) {
 				let idx = Self::index_from_coords(x, y);
-				self.set_value_at_index(idx, val)
+				self.assign_at_index(idx, val)
 			}
 			/// Sets the bit at coordinates `(x, y)`.
 			#[inline(always)]
@@ -1056,7 +1056,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			
 			#[inline]
-			fn set_value_at_index(&mut self, idx: usize, val: bool) {
+			fn assign_at_index(&mut self, idx: usize, val: bool) {
 				let byte = idx / 64;
 				let bit = idx % 64;
 				if val {
@@ -1090,9 +1090,9 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			/// Sets the bit at coordinates `(x, y)`.
 			#[inline(always)]
-			fn set_value(&mut self, x: u8, y: u8, val: bool) {
+			fn assign(&mut self, x: u8, y: u8, val: bool) {
 				let idx = Self::index_from_coords(x, y);
-				self.set_value_at_index(idx, val)
+				self.assign_at_index(idx, val)
 			}
 			#[inline(always)]
 			fn set(&mut self, x: u8, y: u8) {
@@ -1304,7 +1304,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			
 			#[inline]
-			pub const fn set_value_at_index(&mut self, idx: usize, val: bool) {
+			pub const fn assign_at_index(&mut self, idx: usize, val: bool) {
 				let byte = idx / 64;
 				let bit = idx % 64;
 				if val {
@@ -1338,9 +1338,9 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			/// Sets the bit at coordinates `(x, y)`.
 			#[inline(always)]
-			pub const fn set_value(&mut self, x: u8, y: u8, val: bool) {
+			pub const fn assign(&mut self, x: u8, y: u8, val: bool) {
 				let idx = Self::index_from_coords(x, y);
-				self.set_value_at_index(idx, val)
+				self.assign_at_index(idx, val)
 			}
 			#[inline(always)]
 			pub const fn set(&mut self, x: u8, y: u8) {

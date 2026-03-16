@@ -268,7 +268,7 @@ impl Bitboard for SmallBitboard {
 	}
 
 	#[inline(always)]
-	fn set_value_at_index(&mut self, idx: usize, val: bool) {
+	fn assign_at_index(&mut self, idx: usize, val: bool) {
 		if val {
 			self.bits |= 1 << idx;
 		} else {
@@ -293,8 +293,8 @@ impl Bitboard for SmallBitboard {
 	}
 
 	#[inline(always)]
-	fn set_value(&mut self, x: u8, y: u8, val: bool) {
-		self.set_value_at_index(self.index_from_coords_with_same_shape(x, y), val)
+	fn assign(&mut self, x: u8, y: u8, val: bool) {
+		self.assign_at_index(self.index_from_coords_with_same_shape(x, y), val)
 	}
 	#[inline(always)]
 	fn set(&mut self, x: u8, y: u8) {
