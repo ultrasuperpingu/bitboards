@@ -25,24 +25,18 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			
 			match ident.as_str() {
 				"width" => {
-					if let Expr::Lit(expr_lit) = nv.value {
-						if let syn::Lit::Int(lit_int) = expr_lit.lit {
-							width = Some(lit_int.base10_parse::<usize>().unwrap());
-						}
+					if let Expr::Lit(expr_lit) = nv.value && let syn::Lit::Int(lit_int) = expr_lit.lit {
+						width = Some(lit_int.base10_parse::<usize>().unwrap());
 					}
 				}
 				"height" => {
-					if let Expr::Lit(expr_lit) = nv.value {
-						if let syn::Lit::Int(lit_int) = expr_lit.lit {
-							height = Some(lit_int.base10_parse::<usize>().unwrap());
-						}
+					if let Expr::Lit(expr_lit) = nv.value && let syn::Lit::Int(lit_int) = expr_lit.lit {
+						height = Some(lit_int.base10_parse::<usize>().unwrap());
 					}
 				}
 				"col_major" => {
-					if let Expr::Lit(expr_lit) = nv.value {
-						if let syn::Lit::Bool(lit_bool) = expr_lit.lit {
-							col_major = Some(lit_bool.value);
-						}
+					if let Expr::Lit(expr_lit) = nv.value && let syn::Lit::Bool(lit_bool) = expr_lit.lit {
+						col_major = Some(lit_bool.value);
 					}
 				}
 				_ => {}

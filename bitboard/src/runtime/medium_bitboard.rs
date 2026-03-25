@@ -13,10 +13,10 @@ impl MediumBitboard {
 		let mut subsets = Vec::new();
 		let zero = self.empty_with_same_shape();
 
-		let mut subset = zero.clone();
+		let mut subset = zero;
 
 		loop {
-			subsets.push(subset.clone());
+			subsets.push(subset);
 			subset = Self::new(self.w, self.h, self.col_major, subset.bits.wrapping_sub(self.bits) & self.bits);
 			if subset == zero {
 				break;
