@@ -22,18 +22,22 @@ mod tests {
 		let bb = from_indices(&[0, 7, 14, 21]);
 		println!("{bb}");
 		assert!(bb.has_n_aligned_horizontal(4), "Horizontal alignment not detected");
+		assert!(bb.has_aligned_horizontal::<4>(), "Horizontal alignment not detected");
 		
 		let bb = from_indices(&[21, 28, 35, 42]);
 		println!("{bb}");
 		assert!(bb.has_n_aligned_horizontal(4), "Horizontal alignment not detected");
+		assert!(bb.has_aligned_horizontal::<4>(), "Horizontal alignment not detected");
 
 		let bb = from_indices(&[21+6, 28+6, 35+6, 42+6]);
 		println!("{bb}");
 		assert!(bb.has_n_aligned_horizontal(4), "Horizontal alignment not detected");
+		assert!(bb.has_aligned_horizontal::<4>(), "Horizontal alignment not detected");
 		
 		
 		let bleed = from_indices(&[35, 42, 49, 0]); 
 		assert!(!bleed.has_n_aligned_horizontal(4), "Horizontal bleeding detected!");
+		assert!(!bleed.has_aligned_horizontal::<4>(), "Horizontal bleeding detected!");
 	}
 
 	#[test]
@@ -41,9 +45,11 @@ mod tests {
 		let bb = from_indices(&[0, 1, 2, 3]);
 		println!("{bb}");
 		assert!(bb.has_n_aligned_vertical(4), "Vertical alignment not detected");
+		assert!(bb.has_aligned_vertical::<4>(), "Vertical alignment not detected");
 
 		let bleed = from_indices(&[5, 6, 7, 8]);
 		assert!(!bleed.has_n_aligned_vertical(4), "Vertical bleeding detected!");
+		assert!(!bleed.has_aligned_vertical::<4>(), "Vertical bleeding detected!");
 	}
 
 	#[test]
@@ -53,6 +59,7 @@ mod tests {
 		println!("{}", Bitboard7x7Col::DIAG_DEC_OFFSET);
 		println!("{bb}");
 		assert!(bb.has_n_aligned_diag_inc(4), "Diagonal INC alignment not detected");
+		assert!(bb.has_aligned_diag_inc::<4>(), "Diagonal INC alignment not detected");
 	}
 
 	#[test]
@@ -61,11 +68,15 @@ mod tests {
 		println!("{bb}");
 		assert!(bb.has_n_aligned_diag_dec(4), "Diagonal DEC alignment not detected");
 		assert!(!bb.has_n_aligned_diag_inc(4), "Diagonal INC alignment incorrectly detected");
+		assert!(bb.has_aligned_diag_dec::<4>(), "Diagonal DEC alignment not detected");
+		assert!(!bb.has_aligned_diag_inc::<4>(), "Diagonal INC alignment incorrectly detected");
 
 		let bb = from_indices(&[6, 12, 18, 24]);
 		println!("{bb}");
 		assert!(bb.has_n_aligned_diag_dec(4), "Diagonal DEC alignment not detected");
 		assert!(!bb.has_n_aligned_diag_inc(4), "Diagonal INC alignment incorrectly detected");
+		assert!(bb.has_aligned_diag_dec::<4>(), "Diagonal DEC alignment not detected");
+		assert!(!bb.has_aligned_diag_inc::<4>(), "Diagonal INC alignment incorrectly detected");
 		
 	}
 
@@ -73,8 +84,18 @@ mod tests {
 	fn test_n_parameter() {
 		let bb = from_indices(&[0, 1, 2, 3, 4]);
 		assert!(bb.has_n_aligned(5));
-		assert!(bb.has_n_aligned(2));
 		assert!(!bb.has_n_aligned(6));
+		assert!(bb.has_n_aligned(2));
+		assert!(bb.has_aligned::<2>());
+		assert!(bb.count_aligned::<2>() == 4);
+		assert!(bb.has_aligned::<3>());
+		assert!(bb.count_aligned::<3>() == 3);
+		assert!(bb.has_aligned::<4>());
+		assert!(bb.count_aligned::<4>() == 2);
+		assert!(bb.has_aligned::<5>());
+		assert!(bb.count_aligned::<5>() == 1);
+		assert!(!bb.has_aligned::<6>());
+		assert!(bb.count_aligned::<6>() == 0);
 	}
 }
 
@@ -155,6 +176,8 @@ mod tests_8x8 {
 		let full_row = from_indices(&[0, 8, 16, 24, 32, 40, 48, 56]);
 		assert!(full_row.has_n_aligned(8));
 		assert!(!full_row.has_n_aligned(9));
+		assert!(full_row.has_aligned::<8>());
+		assert!(!full_row.has_aligned::<9>());
 	}
 }
 
@@ -247,5 +270,13 @@ mod tests_goban {
 		assert!(!Goban::FULL.has_n_aligned(20));
 		assert!(Goban::EMPTY.has_n_aligned(0));
 		assert!(!Goban::EMPTY.has_n_aligned(1));
+		assert!(full_col.has_aligned::<19>());
+		assert!(!full_col.has_aligned::<20>());
+		assert!(Goban::FULL.has_aligned::<19>());
+		assert!(!Goban::FULL.has_aligned::<20>());
+		//TODO:fixme
+		//assert!(Goban::EMPTY.has_aligned::<0>());
+		//assert!(!Goban::EMPTY.has_aligned::<1>());
+		
 	}
 }

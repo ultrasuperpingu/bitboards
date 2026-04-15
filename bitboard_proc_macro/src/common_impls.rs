@@ -583,6 +583,187 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				}
 				temp.any()
 			}
+			// TODO: const version for copy storage
+			/*#[inline]
+			pub const fn has_n_aligned_dir_const<const N: usize>(
+				&self,
+				offset: usize,
+				mask: Option<Self>,
+			) -> bool {
+				if N <= 1 {
+					return N == 0 || self.any();
+				}
+
+				let mut temp = *self;
+				let mut acc = temp; // accumulation
+				let mut len = 1;
+				let mut shift = offset;
+
+				while len * 2 <= N {
+					let shifted = match mask {
+						Some(m) => acc.and_const(&m).shr_const(shift),
+						None => acc.shr_const(shift),
+					};
+					acc = acc.and_const(&shifted);
+					len *= 2;
+					shift <<= 1;
+				}
+
+				let remaining = N - len;
+				if remaining > 0 {
+					let mut tail = temp;
+					let mut i = 0;
+					while i < remaining {
+						let shifted = match mask {
+							Some(m) => tail.and_const(&m).shr_const(offset),
+							None => tail.shr_const(offset),
+						};
+						tail = tail.and_const(&shifted);
+						i += 1;
+					}
+					acc = acc.and_const(&tail);
+				}
+
+				acc.any()
+			}*/
+			#[inline]
+			const fn get_aligned_dir_const<const N: usize>(
+				&self,
+				offset: usize,
+				mask: Option<Self>,
+			) -> Self {
+				//if N <= 1 {
+				//	return N == 0 || self.any();
+				//}
+
+				let mut temp = self.clone_const();
+				let mut built = 1;
+				let mut shift = offset;
+
+				while built * 2 <= N {
+					let shifted = match &mask {
+						Some(m) => temp.and_const(m).shr_const(shift),
+						None => temp.shr_const(shift),
+					};
+
+					temp = temp.and_const(&shifted);
+					built *= 2;
+					shift <<= 1;
+				}
+
+				let mut remaining = N - built;
+				while remaining > 0 {
+					let shifted = match &mask {
+						Some(m) => temp.and_const(m).shr_const(offset),
+						None => temp.shr_const(offset),
+					};
+
+					temp = temp.and_const(&shifted);
+					remaining -= 1;
+				}
+
+				temp
+			}
+			#[inline]
+			pub fn has_aligned<const N: usize>(&self) -> bool {
+				self.has_aligned_horizontal::<N>()
+					|| self.has_aligned_vertical::<N>()
+					|| self.has_aligned_diag_dec::<N>()
+					|| self.has_aligned_diag_inc::<N>()
+			}
+
+			#[inline]
+			pub const fn has_aligned_horizontal<const N: usize>(&self) -> bool {
+				if !Self::COL_MAJOR {
+					self.get_aligned_dir_const::<N>(
+						Self::H_OFFSET as usize,
+						Some(Self::WEST_BORDER.not_const()),
+					).any()
+				} else {
+					self.get_aligned_dir_const::<N>(
+						Self::H_OFFSET as usize,
+						None,
+					).any()
+				}
+			}
+			#[inline]
+			pub const fn has_aligned_vertical<const N: usize>(&self) -> bool {
+				if Self::COL_MAJOR {
+					self.get_aligned_dir_const::<N>(
+						Self::V_OFFSET as usize,
+						Some(Self::SOUTH_BORDER.not_const()),
+					).any()
+				} else {
+					self.get_aligned_dir_const::<N>(
+						Self::V_OFFSET as usize,
+						None,
+					).any()
+				}
+			}
+			#[inline]
+			pub const fn has_aligned_diag_dec<const N: usize>(&self) -> bool {
+				self.get_aligned_dir_const::<N>(
+					Self::DIAG_DEC_OFFSET as usize,
+					Some(Self::EAST_BORDER.not_const()),
+				).any()
+			}
+			#[inline]
+			pub const fn has_aligned_diag_inc<const N: usize>(&self) -> bool {
+				self.get_aligned_dir_const::<N>(
+					Self::DIAG_INC_OFFSET as usize,
+					Some(Self::WEST_BORDER.not_const()),
+				).any()
+			}
+
+			#[inline]
+			pub fn count_aligned<const N: usize>(&self) -> u32 {
+				self.count_aligned_horizontal::<N>()
+					+ self.count_aligned_vertical::<N>()
+					+ self.count_aligned_diag_dec::<N>()
+					+ self.count_aligned_diag_inc::<N>()
+			}
+			#[inline]
+			pub fn count_aligned_horizontal<const N: usize>(&self) -> u32 {
+				if !Self::COL_MAJOR {
+					self.get_aligned_dir_const::<N>(
+						Self::H_OFFSET as usize,
+						Some(Self::WEST_BORDER.not_const()),
+					).count()
+				} else {
+					self.get_aligned_dir_const::<N>(
+						Self::H_OFFSET as usize,
+						None,
+					).count()
+				}
+			}
+			#[inline]
+			pub fn count_aligned_vertical<const N: usize>(&self) -> u32 {
+				if Self::COL_MAJOR {
+					self.get_aligned_dir_const::<N>(
+						Self::V_OFFSET as usize,
+						Some(Self::SOUTH_BORDER.not_const()),
+					).count()
+				} else {
+					self.get_aligned_dir_const::<N>(
+						Self::V_OFFSET as usize,
+						None,
+					).count()
+				}
+			}
+			#[inline]
+			pub fn count_aligned_diag_dec<const N: usize>(&self) -> u32 {
+				self.get_aligned_dir_const::<N>(
+					Self::DIAG_DEC_OFFSET as usize,
+					Some(Self::EAST_BORDER.not_const()),
+				).count()
+			}
+			#[inline]
+			pub fn count_aligned_diag_inc<const N: usize>(&self) -> u32 {
+				self.get_aligned_dir_const::<N>(
+					Self::DIAG_INC_OFFSET as usize,
+					Some(Self::WEST_BORDER.not_const()),
+				).count()
+			}
 		}
 	}
 }

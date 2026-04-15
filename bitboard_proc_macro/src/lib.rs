@@ -588,6 +588,10 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			pub const fn from_coords(x: u8, y: u8) -> Self {
 				Self::from_index(Self::index_from_coords(x,y))
 			}
+			#[inline]
+			const fn clone_const(&self) -> Self {
+				Self(self.0)
+			}
 			/// Returns the underlying storage value of the bitboard.
 			#[inline(always)]
 			pub const fn storage(&self) -> <Self as bitboard::Bitboard>::Storage {
@@ -1267,6 +1271,15 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				}
 				false
 			}
+			#[inline]
+			pub const fn count(&self) -> u32 {
+				let mut counts=0;
+				let mut i=0;
+				while i <self.0.len() {
+					counts+=self.0[i].count_ones();
+				}
+				counts
+			}
 			/// Construct a Bitboard from its storage representation
 			#[inline]
 			pub const fn from_storage(v: <Self as bitboard::Bitboard>::Storage) -> Self {
@@ -1285,6 +1298,16 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				let mut inst = Self::new();
 				inst.set_at_index(index);
 				inst
+			}
+			#[inline]
+			const fn clone_const(&self) -> Self {
+				let mut array = [0; Self::ARRAY_LEN];
+				let mut i = 0;
+				while i < Self::ARRAY_LEN {
+					array[i] = self.0[i];
+					i += 1;
+				}
+				Self::from_storage(array)
 			}
 			#[inline(always)]
 			pub const fn storage(&self) -> <Self as bitboard::Bitboard>::Storage {
