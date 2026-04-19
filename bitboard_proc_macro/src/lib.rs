@@ -1273,10 +1273,11 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			}
 			#[inline]
 			pub const fn count(&self) -> u32 {
-				let mut counts=0;
-				let mut i=0;
+				let mut counts = 0;
+				let mut i = 0;
 				while i <self.0.len() {
 					counts+=self.0[i].count_ones();
+					i += 1;
 				}
 				counts
 			}
