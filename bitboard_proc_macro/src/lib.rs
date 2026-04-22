@@ -589,7 +589,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				Self::from_index(Self::index_from_coords(x,y))
 			}
 			#[inline]
-			const fn clone_const(&self) -> Self {
+			pub const fn clone_const(&self) -> Self {
 				Self(self.0)
 			}
 			/// Returns the underlying storage value of the bitboard.
@@ -686,28 +686,32 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			/// Extracts the bits along the ascending diagonal (bottom-left → top-right) at `index`.
 			#[inline(always)]
 			pub fn extract_diag_inc(&self, index: usize) -> <Self as bitboard::Bitboard>::Storage {
-				self.pext(&Self::compute_diag_inc_mask(index))
+				//self.pext(&Self::compute_diag_inc_mask(index))
+				bitboard::Bitboard::pext(self, &Self::compute_diag_inc_mask(index))
 			}
 			
 			/// Inserts `bits` along the ascending diagonal (bottom-left → top-right) at `index`.
 			#[inline(always)]
 			pub fn insert_diag_inc(&mut self, index: usize, bits: <Self as bitboard::Bitboard>::Storage) {
 				let mask = Self::compute_diag_inc_mask(index);
-				let new = mask.pdep(bits);
+				//let new = mask.pdep(bits);
+				let new = bitboard::Bitboard::pdep(&mask, bits);
 				let cleared = Self::from_storage(self.storage() & !mask.storage());
 				*self = cleared | new;
 			}
 			/// Extracts the bits along the descending diagonal (top-left → bottom-right) at `index`.
 			#[inline(always)]
 			pub fn extract_diag_dec(&self, index: usize) -> <Self as bitboard::Bitboard>::Storage {
-				self.pext(&Self::compute_diag_dec_mask(index))
+				//self.pext(&Self::compute_diag_dec_mask(index))
+				bitboard::Bitboard::pext(self, &Self::compute_diag_dec_mask(index))
 			}
 			
 			/// Inserts `bits` along the descending diagonal (top-left → bottom-right) at `index`.
 			#[inline(always)]
 			pub fn insert_diag_dec(&mut self, index: usize, bits: <Self as bitboard::Bitboard>::Storage) {
 				let mask = Self::compute_diag_dec_mask(index);
-				let new = mask.pdep(bits);
+				//let new = mask.pdep(bits);
+				let new = bitboard::Bitboard::pdep(&mask, bits);
 				let cleared = Self::from_storage(self.storage() & !mask.storage());
 				*self = cleared | new;
 			}
@@ -728,7 +732,8 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					let mut table = vec![Self::empty(); table_size];
 
 					for index in 0..table_size {
-						let blockers = mask.pdep(<<Self as bitboard::Bitboard>::Storage as bitboard::IntegerStorage>::from_usize(index));
+						//let blockers = mask.pdep(<<Self as bitboard::Bitboard>::Storage as bitboard::IntegerStorage>::from_usize(index));
+						let blockers = bitboard::Bitboard::pdep(&mask, <<Self as bitboard::Bitboard>::Storage as bitboard::IntegerStorage>::from_usize(index));
 						let attacks = attack_fn(sq, blockers);
 						table[index] = attacks;
 					}
@@ -830,7 +835,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 							continue;
 						}
 
-						let mut row = self.extract_row(y as u8);
+						let mut row = bitboard::Bitboard::extract_row(self, y as u8);//self.extract_row(y as u8);
 
 						if dx > 0 {
 							let s = dx as usize;
@@ -848,7 +853,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 							row = (row >> s) & lane_mask;
 						}
 
-						out.insert_row(ny as u8, row);
+						bitboard::Bitboard::insert_row(&mut out, ny as u8, row);//out.insert_row(ny as u8, row);
 						y += 1;
 					}
 				} else {
@@ -864,7 +869,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 							continue;
 						}
 
-						let mut col = self.extract_col(x as u8);
+						let mut col = bitboard::Bitboard::extract_col(self, x as u8);//self.extract_col(x as u8);
 
 						if dy > 0 {
 							let s = dy as usize;
@@ -882,7 +887,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 							col = (col >> s) & lane_mask;
 						}
 
-						out.insert_col(nx as u8, col);
+						bitboard::Bitboard::insert_col(&mut out, nx as u8, col);//out.insert_col(nx as u8, col);
 						x += 1;
 					}
 				}
@@ -898,90 +903,19 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			#[inline(always)]
 			const fn get_border_mask(offset: i16) -> <Self as bitboard::Bitboard>::Storage {
 				match offset {
-					o if o ==  Self::H_OFFSET as i16 => Self::NO_WRAP_E_MASK,
-					o if o == -(Self::H_OFFSET as i16) => Self::NO_WRAP_W_MASK,
-					o if o ==  Self::V_OFFSET as i16 => Self::NO_WRAP_N_MASK,
-					o if o == -(Self::V_OFFSET as i16) => Self::NO_WRAP_S_MASK,
+					o if o ==  Self::H_OFFSET as i16 => Self::NO_WRAP_E_MASK.0,
+					o if o == -(Self::H_OFFSET as i16) => Self::NO_WRAP_W_MASK.0,
+					o if o ==  Self::V_OFFSET as i16 => Self::NO_WRAP_N_MASK.0,
+					o if o == -(Self::V_OFFSET as i16) => Self::NO_WRAP_S_MASK.0,
 
-					o if o ==  Self::H_OFFSET as i16 + Self::V_OFFSET as i16 => Self::NO_WRAP_NE_MASK,
-					o if o == -(Self::H_OFFSET as i16) + Self::V_OFFSET as i16 => Self::NO_WRAP_NW_MASK,
-					o if o ==  Self::H_OFFSET as i16 - Self::V_OFFSET as i16 => Self::NO_WRAP_SE_MASK,
-					o if o == -(Self::H_OFFSET as i16) - Self::V_OFFSET as i16 => Self::NO_WRAP_SW_MASK,
+					o if o ==  Self::H_OFFSET as i16 + Self::V_OFFSET as i16 => Self::NO_WRAP_NE_MASK.0,
+					o if o == -(Self::H_OFFSET as i16) + Self::V_OFFSET as i16 => Self::NO_WRAP_NW_MASK.0,
+					o if o ==  Self::H_OFFSET as i16 - Self::V_OFFSET as i16 => Self::NO_WRAP_SE_MASK.0,
+					o if o == -(Self::H_OFFSET as i16) - Self::V_OFFSET as i16 => Self::NO_WRAP_SW_MASK.0,
 
 					_ => !0 as #storage_ty, // aucun masque
 				}
 			}
-			/// Shift bitboard one square north (up).
-			#[inline(always)]
-			pub const fn shift_n(&self) -> Self {
-				Self::from_storage((self.0 & Self::NO_WRAP_N_MASK) << Self::V_OFFSET)
-			}
-			/// Shift bitboard one square south (down).
-			#[inline(always)]
-			pub const fn shift_s(&self) -> Self {
-				Self::from_storage((self.0 & Self::NO_WRAP_S_MASK) >> Self::V_OFFSET)
-			}
-			/// Shift bitboard one square east (right).
-			#[inline(always)]
-			pub const fn shift_e(&self) -> Self {
-				Self::from_storage((self.0 & Self::NO_WRAP_E_MASK) << Self::H_OFFSET)
-			}
-			/// Shift bitboard one square west (left).
-			#[inline(always)]
-			pub const fn shift_w(&self) -> Self {
-				Self::from_storage((self.0 & Self::NO_WRAP_W_MASK) >> Self::H_OFFSET)
-			}
-			/// Shift bitboard one square north-east.
-			#[inline(always)]
-			pub const fn shift_ne(&self) -> Self {
-				let delta = Self::H_OFFSET as isize + Self::V_OFFSET as isize;
-				Self::from_storage((self.0 & Self::NO_WRAP_NE_MASK) << delta)
-			}
-			/// Shift bitboard one square north-west.
-			#[inline(always)]
-			pub const fn shift_nw(&self) -> Self {
-				let delta = Self::V_OFFSET as isize - Self::H_OFFSET as isize;
-				if delta >= 0 {
-					Self::from_storage((self.0 & Self::NO_WRAP_NW_MASK) << delta)
-				} else {
-					Self::from_storage((self.0 & Self::NO_WRAP_NW_MASK) >> (-delta))
-				}
-			}
-			/// Shift bitboard one square south-east.
-			#[inline(always)]
-			pub const fn shift_se(&self) -> Self {
-				let delta = Self::H_OFFSET as isize - Self::V_OFFSET as isize;
-				if delta >= 0 {
-					Self::from_storage((self.0 & Self::NO_WRAP_SE_MASK) << delta)
-				} else {
-					Self::from_storage((self.0 & Self::NO_WRAP_SE_MASK) >> (-delta))
-				}
-			}
-			/// Shift bitboard one square south-west.
-			#[inline(always)]
-			pub const fn shift_sw(&self) -> Self {
-				let delta = -(Self::H_OFFSET as isize + Self::V_OFFSET as isize);
-				Self::from_storage((self.0 & Self::NO_WRAP_SW_MASK) >> (-delta))
-			}
-
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_N_MASK : #storage_ty = !Self::row_mask(Self::HEIGHT - 1).storage();
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_S_MASK : #storage_ty = !Self::row_mask(0).storage();
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_E_MASK : #storage_ty = !Self::col_mask(Self::WIDTH - 1).storage();
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_W_MASK : #storage_ty = !Self::col_mask(0).storage();
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_NE_MASK : #storage_ty = Self::NO_WRAP_N_MASK & Self::NO_WRAP_E_MASK;
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_NW_MASK : #storage_ty = Self::NO_WRAP_N_MASK & Self::NO_WRAP_W_MASK;
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_SE_MASK : #storage_ty = Self::NO_WRAP_S_MASK & Self::NO_WRAP_E_MASK;
-			/// A Mask to prevent wrapping during shifts.
-			pub const NO_WRAP_SW_MASK : #storage_ty = Self::NO_WRAP_S_MASK & Self::NO_WRAP_W_MASK;
-			
-			
 		}
 		#derive_bitboard_mask_res
 		impl Copy for #struct_ident {}
@@ -1215,7 +1149,8 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			fn insert_row(&mut self, y: u8, row_bits: Self::Storage) {
 				let mask = Self::row_mask(y);
 				
-				let new_row = mask.pdep(row_bits);
+				//let new_row = mask.pdep(row_bits);
+				let new_row = bitboard::Bitboard::pdep(&mask, row_bits);
 				*self &= !mask;
 				*self |= new_row;
 			}
@@ -1224,7 +1159,8 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 			fn insert_col(&mut self, x: u8, col_bits: Self::Storage) {
 				let mask = Self::col_mask(x);
 				
-				let new_row = mask.pdep(col_bits);
+				//let new_row = mask.pdep(col_bits);
+				let new_row = bitboard::Bitboard::pdep(&mask, col_bits);
 				*self &= !mask;
 				*self |= new_row;
 			}
@@ -1301,7 +1237,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 				inst
 			}
 			#[inline]
-			const fn clone_const(&self) -> Self {
+			pub const fn clone_const(&self) -> Self {
 				let mut array = [0; Self::ARRAY_LEN];
 				let mut i = 0;
 				while i < Self::ARRAY_LEN {
@@ -1419,6 +1355,7 @@ pub fn bitboard(attr: TokenStream, item: TokenStream) -> TokenStream {
 					Self(bits).shl_const(x as usize)
 				}
 			}
+			
 		}
 		#derive_bitboard_mask_res
 		impl Clone for #struct_ident {

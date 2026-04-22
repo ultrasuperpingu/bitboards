@@ -56,11 +56,11 @@ fn main() {
 	let col_mask = Board8x8::col_mask(3); // 4th column
 	println!("Intersection row 4 & col 3: {}", row_mask & col_mask);
 
-	// Get orthogonal/diagonal neighbors of square (3,4)
+	// Get orthogonal/diagonal neighbors mask of square (3,4)
 	let neighbors = Board8x8::NEIGHBORS_8[Board8x8::index_from_coords(3, 4)];
 	println!("Neighbor mask of (3,4):\n {:?}\n{}", neighbors, neighbors);
 
-	// Get orthogonal/diagonal neighbors of square (3,4)
+	// Get orthogonal neighbors of square (2,4) (bits set to one)
 	let neighbors = board.neighbors_ortho(Board8x8::index_from_coords(2, 4));
 	println!("Neighbor ortho of (2,4):\n {:?}\n{}", neighbors, neighbors);
 
@@ -68,4 +68,40 @@ fn main() {
 	board |= Board8x8::FULL;
 	let ray = board.ray_ne(Board8x8::index_from_coords(3, 4));
 	println!("Sliding ray (3,4):\n{}", ray);
+
+	board = Board8x8::CENTER;
+	println!("CENTER:\n{}", board);
+	board = board.dilated();
+	println!("Dilated 1:\n{}", board);
+	board = board.dilated();
+	println!("Dilated 2:\n{}", board);
+	board = board.dilated();
+	println!("Dilated 3:\n{}", board);
+	board = Board8x8::CORNERS;
+	println!("CORNERS:\n{}", board);
+	board = board.dilated();
+	println!("Dilated 1:\n{}", board);
+	board = board.dilated();
+	println!("Dilated 2:\n{}", board);
+	board = board.dilated();
+	println!("Dilated 3:\n{}", board);
+
+	board = Board8x8::FULL;
+	println!("FULL:\n{}", board);
+	board = board.eroded();
+	println!("Eroded 1:\n{}", board);
+	board = board.eroded();
+	println!("Eroded 2:\n{}", board);
+	board = board.eroded();
+	println!("Eroded 3:\n{}", board);
+	board = Board8x8::CORNERS;
+	board = board.dilated();
+	board = board.dilated();
+	println!("Dilated Corners:\n{}", board);
+	board = board.eroded();
+	println!("Eroded 1:\n{}", board);
+	board = board.neighbors_of_any();
+	println!("Neighbors:\n{}", board);
+
+
 }

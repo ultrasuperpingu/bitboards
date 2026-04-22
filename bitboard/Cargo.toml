@@ -57,8 +57,12 @@ bitboard_proc_macro = {path="../bitboard_proc_macro"}
 #name = "pdep_u128"
 #harness = false
 
+#[[bench]]
+#name = "sliding_attacks"
+#harness = false
+
 [[bench]]
-name = "sliding_attacks"
+name = "alignments"
 harness = false
 
 

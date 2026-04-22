@@ -4,8 +4,16 @@ use quote::quote;
 pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::TokenStream {
 	let impl_array = quote! {
 		macro_rules! impl_const_bitwise {
-			($name:ident, $trait:ident, $method:ident, $const_method:ident, $trait_assign:ident, $method_assign:ident, $op_assign:tt) => {
+			($name:ident, $trait:ident, $method:ident, $const_method:ident, $assign_const:ident, $trait_assign:ident, $method_assign:ident, $op_assign:tt) => {
 				impl $name {
+					#[inline(always)]
+					pub const fn $assign_const(&mut self, rhs: &Self) {
+						let mut i = 0;
+						while i < self.0.len() {
+							self.0[i] $op_assign rhs.0[i];
+							i += 1;
+						}
+					}
 					#[inline(always)]
 					pub const fn $const_method(&self, rhs: &Self) -> Self {
 						let mut i = 0;
@@ -30,19 +38,15 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				impl std::ops::$trait_assign for $name {
 					#[inline(always)]
 					fn $method_assign(&mut self, rhs: Self) {
-						let mut i = 0;
-						while i < self.0.len() {
-							self.0[i] $op_assign rhs.0[i];
-							i += 1;
-						}
+						self.$assign_const(&rhs)
 					}
 				}
 			};
 		}
 
-		impl_const_bitwise!(#ident, BitAnd, bitand, and_const, BitAndAssign, bitand_assign, &=);
-		impl_const_bitwise!(#ident, BitOr, bitor, or_const, BitOrAssign, bitor_assign, |=);
-		impl_const_bitwise!(#ident, BitXor, bitxor, xor_const, BitXorAssign, bitxor_assign, ^=);
+		impl_const_bitwise!(#ident, BitAnd, bitand, and_const, and_assign_const, BitAndAssign, bitand_assign, &=);
+		impl_const_bitwise!(#ident, BitOr, bitor, or_const, or_assign_const, BitOrAssign, bitor_assign, |=);
+		impl_const_bitwise!(#ident, BitXor, bitxor, xor_const, xor_assign_const, BitXorAssign, bitxor_assign, ^=);
 
 		impl #ident {
 			pub const fn not_const(&self) -> Self {
@@ -53,6 +57,13 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 					i += 1;
 				}
 				Self(res)
+			}
+			pub const fn not_assign_const(&mut self) {
+				let mut i = 0;
+				while i < self.0.len() {
+					self.0[i] = !self.0[i];
+					i += 1;
+				}
 			}
 		}
 		impl std::ops::Not for #ident {
@@ -91,6 +102,50 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				}
 				Self(res)
 			}
+			pub const fn shl_assign_const(&mut self, rhs: usize) {
+				if rhs == 0 { return; }
+
+				let word_shift = rhs / u64::BITS as usize;
+				let bit_shift = (rhs % u64::BITS as usize) as u32;
+
+				if word_shift >= Self::ARRAY_LEN {
+					*self = Self::EMPTY;
+					return;
+				}
+
+				if bit_shift == 0 {
+					let mut i = (Self::ARRAY_LEN - 1);
+					while i >= word_shift {
+						self.0[i] = self.0[i - word_shift];
+						if i == word_shift { break; }
+						i -= 1;
+					}
+
+					let mut j = 0;
+					while j < word_shift {
+						self.0[j] = 0;
+						j += 1;
+					}
+				} else {
+					let mut i = Self::ARRAY_LEN - 1;
+
+					while i > word_shift {
+						self.0[i] =
+							(self.0[i - word_shift] << bit_shift)
+							| (self.0[i - word_shift - 1] >> (u64::BITS - bit_shift));
+
+						i -= 1;
+					}
+
+					self.0[word_shift] = self.0[0] << bit_shift;
+
+					let mut j = 0;
+					while j < word_shift {
+						self.0[j] = 0;
+						j += 1;
+					}
+				}
+			}
 
 			pub const fn shr_const(&self, rhs: usize) -> Self {
 				if rhs == 0 { return Self(self.0); }
@@ -118,6 +173,45 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 					res[Self::ARRAY_LEN - word_shift - 1] = self.0[Self::ARRAY_LEN - 1] >> bit_shift;
 				}
 				Self(res)
+			}
+			pub const fn shr_assign_const(&mut self, rhs: usize) {
+				if rhs == 0 { return; }
+
+				let word_shift = rhs / u64::BITS as usize;
+				let bit_shift = (rhs % u64::BITS as usize) as u32;
+
+				if word_shift >= Self::ARRAY_LEN {
+					*self = Self::EMPTY;
+					return;
+				}
+
+				if bit_shift == 0 {
+					let mut i = 0;
+					while i < Self::ARRAY_LEN - word_shift {
+						self.0[i] = self.0[i + word_shift];
+						i += 1;
+					}
+				} else {
+					let mut i = 0;
+
+					while i < Self::ARRAY_LEN - word_shift - 1 {
+						self.0[i] =
+							(self.0[i + word_shift] >> bit_shift)
+							| (self.0[i + word_shift + 1] << (u64::BITS - bit_shift));
+
+						i += 1;
+					}
+
+					self.0[Self::ARRAY_LEN - word_shift - 1] =
+						self.0[Self::ARRAY_LEN - 1] >> bit_shift;
+				}
+
+				// zero-fill
+				let mut j = Self::ARRAY_LEN - word_shift;
+				while j < Self::ARRAY_LEN {
+					self.0[j] = 0;
+					j += 1;
+				}
 			}
 		}
 		impl std::ops::Shl<usize> for #ident {
@@ -228,6 +322,24 @@ pub(crate) fn bitboard_mask_int_impl(ident: &syn::Ident) -> proc_macro2::TokenSt
 			
 			#[inline(always)]
 			pub const fn shr_const(&self, rhs: usize) -> Self { Self(self.0 >> rhs) }
+
+			#[inline(always)]
+			pub const fn and_assign_const(&mut self, rhs: &Self) { self.0 &= rhs.0; }
+			
+			#[inline(always)]
+			pub const fn or_assign_const(&mut self, rhs: &Self) { self.0 |= rhs.0; }
+			
+			#[inline(always)]
+			pub const fn xor_assign_const(&mut self, rhs: &Self) { self.0 ^= rhs.0; }
+			
+			#[inline(always)]
+			pub const fn not_assign_const(&mut self) { self.0 = !self.0; }
+			
+			#[inline(always)]
+			pub const fn shl_assign_const(&mut self, rhs: usize) { self.0 <<= rhs; }
+			
+			#[inline(always)]
+			pub const fn shr_assign_const(&mut self, rhs: usize) { self.0 >>= rhs; }
 		}
 
 		impl std::ops::BitAnd for #ident {

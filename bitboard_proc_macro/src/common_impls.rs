@@ -495,6 +495,174 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 
 				bb
 			}
+			/// Shift bitboard one square north (up).
+			#[inline(always)]
+			pub const fn shift_n(&mut self) {
+				self.and_assign_const(&Self::NO_WRAP_N_MASK);
+				self.shl_assign_const(Self::V_OFFSET);
+			}
+			/// Shifted bitboard one square north (up).
+			#[inline(always)]
+			pub const fn shifted_n(&self) -> Self {
+				self.and_const(&Self::NO_WRAP_N_MASK).shl_const(Self::V_OFFSET)
+			}
+			/// Shift bitboard one square south (down).
+			#[inline(always)]
+			pub const fn shift_s(&mut self) {
+				self.and_assign_const(&Self::NO_WRAP_S_MASK);
+				self.shr_assign_const(Self::V_OFFSET);
+			}
+			/// Shifted bitboard one square south (down).
+			#[inline(always)]
+			pub const fn shifted_s(&self) -> Self {
+				self.and_const(&Self::NO_WRAP_S_MASK).shr_const(Self::V_OFFSET)
+			}
+			/// Shift bitboard one square east (right).
+			#[inline(always)]
+			pub const fn shift_e(&mut self) {
+				self.and_assign_const(&Self::NO_WRAP_E_MASK);
+				self.shl_assign_const(Self::H_OFFSET);
+			}
+			/// Shifted bitboard one square east (right).
+			#[inline(always)]
+			pub const fn shifted_e(&self) -> Self {
+				self.and_const(&Self::NO_WRAP_E_MASK).shl_const(Self::H_OFFSET)
+			}
+			/// Shift bitboard one square west (left).
+			#[inline(always)]
+			pub const fn shift_w(&mut self) {
+				self.and_assign_const(&Self::NO_WRAP_W_MASK);
+				self.shr_assign_const(Self::H_OFFSET);
+			}
+			/// Shifted bitboard one square west (left).
+			#[inline(always)]
+			pub const fn shifted_w(&self) -> Self {
+				self.and_const(&Self::NO_WRAP_W_MASK).shr_const(Self::H_OFFSET)
+			}
+			const NE_OFFSET: isize = Self::V_OFFSET as isize + Self::H_OFFSET as isize;
+			/// Shift bitboard one square north-east.
+			#[inline(always)]
+			pub const fn shift_ne(&mut self) {
+				//let delta = Self::H_OFFSET as usize + Self::V_OFFSET as usize;
+				self.and_assign_const(&Self::NO_WRAP_NE_MASK);
+				self.shl_assign_const(Self::NE_OFFSET as usize);
+			}
+			/// Shifted bitboard one square north-east.
+			#[inline(always)]
+			pub const fn shifted_ne(&self) -> Self {
+				//let delta = Self::H_OFFSET as usize + Self::V_OFFSET as usize;
+				self.and_const(&Self::NO_WRAP_NE_MASK).shl_const(Self::NE_OFFSET as usize)
+			}
+			const NW_OFFSET: isize = Self::V_OFFSET as isize - Self::H_OFFSET as isize;
+			/// Shift bitboard one square north-west.
+			#[inline(always)]
+			pub const fn shift_nw(&mut self) {
+				//let delta = Self::V_OFFSET as isize - Self::H_OFFSET as isize;
+				if Self::NW_OFFSET >= 0 {
+					self.and_assign_const(&Self::NO_WRAP_NW_MASK);
+					self.shl_assign_const(Self::NW_OFFSET as usize);
+				} else {
+					self.and_assign_const(&Self::NO_WRAP_NW_MASK);
+					self.shl_assign_const((-Self::NW_OFFSET) as usize);
+				}
+			}
+			/// Shifted bitboard one square north-west.
+			#[inline(always)]
+			pub const fn shifted_nw(&self) -> Self {
+				// TODO: compile time if...
+				//let delta = Self::V_OFFSET as isize - Self::H_OFFSET as isize;
+				if Self::NW_OFFSET >= 0 {
+					self.and_const(&Self::NO_WRAP_NW_MASK).shl_const(Self::NW_OFFSET as usize)
+				} else {
+					self.and_const(&Self::NO_WRAP_NW_MASK).shr_const((-Self::NW_OFFSET) as usize)
+				}
+			}
+			const SE_OFFSET: isize = Self::H_OFFSET as isize - Self::V_OFFSET as isize;
+			/// Shift bitboard one square south-east.
+			#[inline(always)]
+			pub const fn shift_se(&mut self) {
+				//let delta = Self::H_OFFSET as isize - Self::V_OFFSET as isize;
+				if Self::SE_OFFSET >= 0 {
+					self.and_assign_const(&Self::NO_WRAP_SE_MASK);
+					self.shl_assign_const(Self::SE_OFFSET as usize);
+				} else {
+					self.and_assign_const(&Self::NO_WRAP_SE_MASK);
+					self.shr_assign_const((-Self::SE_OFFSET) as usize);
+				}
+			}
+			/// Shifted bitboard one square south-east.
+			#[inline(always)]
+			pub const fn shifted_se(&self) -> Self {
+				//let delta = Self::H_OFFSET as isize - Self::V_OFFSET as isize;
+				if Self::SE_OFFSET >= 0 {
+					self.and_const(&Self::NO_WRAP_SE_MASK).shl_const(Self::SE_OFFSET as usize)
+				} else {
+					self.and_const(&Self::NO_WRAP_SE_MASK).shr_const((-Self::SE_OFFSET) as usize)
+				}
+			}
+			const SW_OFFSET: isize = -(Self::H_OFFSET as isize + Self::V_OFFSET as isize);
+			/// Shift bitboard one square south-west.
+			#[inline(always)]
+			pub const fn shift_sw(&mut self) {
+				//let delta = -(Self::H_OFFSET as isize + Self::V_OFFSET as isize);
+				self.and_assign_const(&Self::NO_WRAP_SW_MASK);
+				self.shr_assign_const((-Self::SW_OFFSET) as usize);
+			}
+			/// Shifted bitboard one square south-west.
+			#[inline(always)]
+			pub const fn shifted_sw(&self) -> Self {
+				//let delta = -(Self::H_OFFSET as isize + Self::V_OFFSET as isize);
+				self.and_const(&Self::NO_WRAP_SW_MASK).shr_const((-Self::SW_OFFSET) as usize)
+			}
+			/// Return the dilated board
+			pub const fn dilated(&self) -> Self {
+				let mut	res = self.clone_const();
+				res.or_assign_const(&self.shifted_e());
+				res.or_assign_const(&self.shifted_ne());
+				res.or_assign_const(&self.shifted_n());
+				res.or_assign_const(&self.shifted_nw());
+				res.or_assign_const(&self.shifted_w());
+				res.or_assign_const(&self.shifted_sw());
+				res.or_assign_const(&self.shifted_s());
+				res.or_assign_const(&self.shifted_se());
+				res
+			}
+			/// Return the eroded board
+			pub const fn eroded(&self) -> Self {
+				let mut	res = self.clone_const();
+				res.and_assign_const(&self.shifted_e());
+				res.and_assign_const(&self.shifted_ne());
+				res.and_assign_const(&self.shifted_n());
+				res.and_assign_const(&self.shifted_nw());
+				res.and_assign_const(&self.shifted_w());
+				res.and_assign_const(&self.shifted_sw());
+				res.and_assign_const(&self.shifted_s());
+				res.and_assign_const(&self.shifted_se());
+				res
+			}
+			/// Return all neighbors of any stone in the bitboard
+			pub const fn neighbors_of_any(&self) -> Self {
+				let mut nei = self.dilated();
+				nei.and_const(&self.not_const());
+				nei
+			}
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_N_MASK : Self = Self::row_mask(Self::HEIGHT - 1).not_const();
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_S_MASK : Self = Self::row_mask(0).not_const();
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_E_MASK : Self = Self::col_mask(Self::WIDTH - 1).not_const();
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_W_MASK : Self = Self::col_mask(0).not_const();
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_NE_MASK : Self = Self::NO_WRAP_N_MASK.and_const(&Self::NO_WRAP_E_MASK);
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_NW_MASK : Self = Self::NO_WRAP_N_MASK.and_const(&Self::NO_WRAP_W_MASK);
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_SE_MASK : Self = Self::NO_WRAP_S_MASK.and_const(&Self::NO_WRAP_E_MASK);
+			/// A Mask to prevent wrapping during shifts.
+			pub const NO_WRAP_SW_MASK : Self = Self::NO_WRAP_S_MASK.and_const(&Self::NO_WRAP_W_MASK);
+
 			#[inline]
 			pub const fn has_n_aligned(&self, n: u8) -> bool {
 				if n == 0 { return true; }
@@ -583,49 +751,7 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				}
 				temp.any()
 			}
-			// TODO: const version for copy storage
-			/*#[inline]
-			pub const fn has_n_aligned_dir_const<const N: usize>(
-				&self,
-				offset: usize,
-				mask: Option<Self>,
-			) -> bool {
-				if N <= 1 {
-					return N == 0 || self.any();
-				}
 
-				let mut temp = *self;
-				let mut acc = temp; // accumulation
-				let mut len = 1;
-				let mut shift = offset;
-
-				while len * 2 <= N {
-					let shifted = match mask {
-						Some(m) => acc.and_const(&m).shr_const(shift),
-						None => acc.shr_const(shift),
-					};
-					acc = acc.and_const(&shifted);
-					len *= 2;
-					shift <<= 1;
-				}
-
-				let remaining = N - len;
-				if remaining > 0 {
-					let mut tail = temp;
-					let mut i = 0;
-					while i < remaining {
-						let shifted = match mask {
-							Some(m) => tail.and_const(&m).shr_const(offset),
-							None => tail.shr_const(offset),
-						};
-						tail = tail.and_const(&shifted);
-						i += 1;
-					}
-					acc = acc.and_const(&tail);
-				}
-
-				acc.any()
-			}*/
 			#[inline]
 			const fn get_aligned_dir_const<const N: usize>(
 				&self,
@@ -665,15 +791,15 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				temp
 			}
 			#[inline]
-			pub fn has_aligned<const N: usize>(&self) -> bool {
-				self.has_aligned_horizontal::<N>()
-					|| self.has_aligned_vertical::<N>()
-					|| self.has_aligned_diag_dec::<N>()
-					|| self.has_aligned_diag_inc::<N>()
+			pub fn has_aligned2<const N: usize>(&self) -> bool {
+				self.has_aligned_horizontal2::<N>()
+					|| self.has_aligned_vertical2::<N>()
+					|| self.has_aligned_diag_dec2::<N>()
+					|| self.has_aligned_diag_inc2::<N>()
 			}
 
 			#[inline]
-			pub const fn has_aligned_horizontal<const N: usize>(&self) -> bool {
+			pub const fn has_aligned_horizontal2<const N: usize>(&self) -> bool {
 				if !Self::COL_MAJOR {
 					self.get_aligned_dir_const::<N>(
 						Self::H_OFFSET as usize,
@@ -687,7 +813,7 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				}
 			}
 			#[inline]
-			pub const fn has_aligned_vertical<const N: usize>(&self) -> bool {
+			pub const fn has_aligned_vertical2<const N: usize>(&self) -> bool {
 				if Self::COL_MAJOR {
 					self.get_aligned_dir_const::<N>(
 						Self::V_OFFSET as usize,
@@ -701,18 +827,107 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				}
 			}
 			#[inline]
-			pub const fn has_aligned_diag_dec<const N: usize>(&self) -> bool {
+			pub const fn has_aligned_diag_dec2<const N: usize>(&self) -> bool {
 				self.get_aligned_dir_const::<N>(
 					Self::DIAG_DEC_OFFSET as usize,
 					Some(Self::EAST_BORDER.not_const()),
 				).any()
 			}
 			#[inline]
-			pub const fn has_aligned_diag_inc<const N: usize>(&self) -> bool {
+			pub const fn has_aligned_diag_inc2<const N: usize>(&self) -> bool {
 				self.get_aligned_dir_const::<N>(
 					Self::DIAG_INC_OFFSET as usize,
 					Some(Self::WEST_BORDER.not_const()),
 				).any()
+			}
+
+			#[inline]
+			pub const fn has_aligned<const N: usize>(&self) -> bool {
+				if N == 0 { return true; }
+				if N == 1 { return self.any(); }
+
+				self.has_aligned_horizontal::<N>() ||
+					self.has_aligned_vertical::<N>() ||
+					self.has_aligned_diag_dec::<N>() ||
+					self.has_aligned_diag_inc::<N>()
+			}
+			#[inline]
+			pub const fn has_aligned_horizontal<const N: usize>(&self) -> bool {
+				if N == 0 { return true; }
+				if N == 1 { return self.any(); }
+
+				let mut temp = Self(self.0);//self.clone_const();
+				let mut i=1;
+				while i < N {
+					if !Self::COL_MAJOR {
+						//let west_mask = !Self::WEST_BORDER.storage();
+						//temp&=(temp&west_mask)>>Self::H_OFFSET;
+						let mask = Self::WEST_BORDER.not_const();
+						let shifted = temp.and_const(&mask).shr_const(Self::H_OFFSET as usize);
+						temp = temp.and_const(&shifted);
+					} else {
+						//temp &= temp >> Self::H_OFFSET;
+						let shifted = temp.shr_const(Self::H_OFFSET as usize);
+						temp = temp.and_const(&shifted);
+					}
+					i += 1;
+				}
+				temp.any()
+			}
+			#[inline]
+			pub const fn has_aligned_vertical<const N: usize>(&self) -> bool {
+				if N == 0 { return true; }
+				if N == 1 { return self.any(); }
+
+				let mut temp = Self(self.0);//self.clone_const();
+				let mut i=1;
+				while i < N {
+					if Self::COL_MAJOR {
+						//let south_mask = !Self::SOUTH_BORDER.storage();
+						//temp&=(temp&south_mask)>>Self::V_OFFSET;
+						let mask = Self::SOUTH_BORDER.not_const();
+						let shifted = temp.and_const(&mask).shr_const(Self::V_OFFSET as usize);
+						temp = temp.and_const(&shifted);
+					} else {
+						//temp &= temp >> Self::V_OFFSET;
+						let shifted = temp.shr_const(Self::V_OFFSET as usize);
+						temp = temp.and_const(&shifted);
+					}
+					i += 1;
+				}
+				temp.any()
+			}
+			#[inline]
+			pub const fn has_aligned_diag_dec<const N: usize>(&self) -> bool {
+				if N <= 1 { return N == 1 && self.any() || N == 0; }
+				let mut temp = Self(self.0);//self.clone_const();
+				let mut i = 1;
+				let mask = Self::EAST_BORDER.not_const(); 
+
+				while i < N {
+					// temp &= (temp & mask) >> offset
+					let can_slide = temp.and_const(&mask);
+					let shifted = can_slide.shr_const(Self::DIAG_DEC_OFFSET as usize);
+					temp = temp.and_const(&shifted);
+
+					i += 1;
+				}
+				temp.any()
+			}
+
+			#[inline]
+			pub const fn has_aligned_diag_inc<const N: usize>(&self) -> bool {
+				if N <= 1 { return N == 1 && self.any() || N == 0; }
+				let mut temp = Self(self.0);//self.clone_const();
+				let mut i = 1;
+				let mask = Self::WEST_BORDER.not_const();
+				while i < N {
+					// temp = temp & ((temp & mask) >> offset)
+					let shifted = temp.and_const(&mask).shr_const(Self::DIAG_INC_OFFSET as usize);
+					temp = temp.and_const(&shifted);
+					i += 1;
+				}
+				temp.any()
 			}
 
 			#[inline]

@@ -383,15 +383,15 @@ fn test_bitboard10x10() {
 	println!("{}", (test << 1usize) & !Bitboard10x10::WEST_BORDER);
 
 	let mut test = Bitboard10x10::EVEN_SQUARES;
-	test=test.shift_s();
+	test=test.shifted_s();
 	println!("{}", test);
 	
 	let mut test = Bitboard10x10::EVEN_SQUARES;
-	test=test.shift_n();
+	test=test.shifted_n();
 	println!("{}", test);
 	
 	let mut test = Bitboard10x10::EVEN_SQUARES;
-	test=test.shift_e();
+	test=test.shifted_e();
 	println!("{}", test);
 	
 	

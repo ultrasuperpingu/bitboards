@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-	use bitboard::Bitboard;
 	use bitboard_proc_macro::{BitboardDebug, BitboardDisplay, bitboard};
 
 
@@ -102,7 +101,6 @@ mod tests {
 
 #[cfg(test)]
 mod tests_8x8 {
-	use bitboard::Bitboard;
 	use bitboard_proc_macro::{BitboardDebug, BitboardDisplay, bitboard};
 
 	#[bitboard(width=8,height=8, col_major=false)]
