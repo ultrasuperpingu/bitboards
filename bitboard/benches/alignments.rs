@@ -28,6 +28,12 @@ fn bench_alignment(c: &mut Criterion) {
 			black_box(bb.has_aligned::<16>());
 		})
 	});
+	group.bench_function("pattern_alignment", |b| {
+		let bb = Goban::compute_ray_n_mask(25).clone();
+		b.iter(|| {
+			black_box(bb.has_aligned::<16>());
+		})
+	});
 
 	group.finish();
 }

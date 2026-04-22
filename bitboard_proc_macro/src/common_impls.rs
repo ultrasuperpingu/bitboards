@@ -663,6 +663,90 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 			/// A Mask to prevent wrapping during shifts.
 			pub const NO_WRAP_SW_MASK : Self = Self::NO_WRAP_S_MASK.and_const(&Self::NO_WRAP_W_MASK);
 
+			pub const fn detect_pattern_h(&self, mut mask: u64) -> Self {
+				let mut res = Self::FULL;
+
+				let mut shifted = self.clone_const();
+				let mut current_nb_shift = 0;
+				while mask != 0 {
+					let lsb = mask.trailing_zeros();
+					mask &= mask - 1;
+
+					let mut i = current_nb_shift;
+					while i < lsb {
+						shifted.shift_e();
+						i += 1;
+						current_nb_shift+=1;
+					}
+
+					res.and_assign_const(&shifted);
+				}
+
+				res
+			}
+			pub const fn detect_pattern_v(&self, mut mask: u64) -> Self {
+				let mut res = Self::FULL;
+
+				let mut shifted = self.clone_const();
+				let mut current_nb_shift = 0;
+				while mask != 0 {
+					let lsb = mask.trailing_zeros();
+					mask &= mask - 1;
+
+					let mut i = current_nb_shift;
+					while i < lsb {
+						shifted.shift_n();
+						i += 1;
+						current_nb_shift+=1;
+					}
+
+					res.and_assign_const(&shifted);
+				}
+
+				res
+			}
+			pub const fn detect_pattern_diag_inc(&self, mut mask: u64) -> Self {
+				let mut res = Self::FULL;
+
+				let mut shifted = self.clone_const();
+				let mut current_nb_shift = 0;
+				while mask != 0 {
+					let lsb = mask.trailing_zeros();
+					mask &= mask - 1;
+
+					let mut i = current_nb_shift;
+					while i < lsb {
+						shifted.shift_ne();
+						i += 1;
+						current_nb_shift+=1;
+					}
+
+					res.and_assign_const(&shifted);
+				}
+
+				res
+			}
+			pub const fn detect_pattern_diag_dec(&self, mut mask: u64) -> Self {
+				let mut res = Self::FULL;
+
+				let mut shifted = self.clone_const();
+				let mut current_nb_shift = 0;
+				while mask != 0 {
+					let lsb = mask.trailing_zeros();
+					mask &= mask - 1;
+
+					let mut i = current_nb_shift;
+					while i < lsb {
+						shifted.shift_se();
+						i += 1;
+						current_nb_shift+=1;
+					}
+
+					res.and_assign_const(&shifted);
+				}
+
+				res
+			}
 			#[inline]
 			pub const fn has_n_aligned(&self, n: u8) -> bool {
 				if n == 0 { return true; }
