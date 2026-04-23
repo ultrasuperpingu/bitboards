@@ -18,20 +18,20 @@ fn bench_alignment(c: &mut Criterion) {
 	group.bench_function("dyn_alignment", |b| {
 		let bb = Goban::compute_ray_n_mask(25).clone();
 		b.iter(|| {
-			black_box(bb.has_n_aligned(16));
+			black_box(bb.has_n_aligned(5));
 		})
 	});
 
 	group.bench_function("static_alignment", |b| {
 		let bb = Goban::compute_ray_n_mask(25).clone();
 		b.iter(|| {
-			black_box(bb.has_aligned::<16>());
+			black_box(bb.has_aligned::<5>());
 		})
 	});
 	group.bench_function("pattern_alignment", |b| {
 		let bb = Goban::compute_ray_n_mask(25).clone();
 		b.iter(|| {
-			black_box(bb.has_aligned::<16>());
+			black_box(bb.detect_pattern_v(0b11111));
 		})
 	});
 
@@ -73,23 +73,31 @@ fn bench_shift_integer(c: &mut Criterion) {
 }
 fn bench_shift_array(c: &mut Criterion) {
 	let mut group = c.benchmark_group("array_shift");
-
-	group.bench_function("shifted_e", |b| {
+	group.bench_function("shift_e", |b| {
+		let bb = Goban::compute_ray_n_mask(25).clone();
+		b.iter(|| {
+			black_box(bb.shifted_e().shifted_e().shifted_e().shifted_e().shifted_e());
+			//black_box(bb.shift_e());
+			//let mut x = bb.clone();
+			//x = black_box(x.shifted_e());
+			//x = black_box(x.shifted_e());
+			//x = black_box(x.shifted_e());
+			//x = black_box(x.shifted_e());
+			//x.shift_e();
+		})
+	});
+	group.bench_function("shift_e_by", |b| {
 		let bb = Goban::compute_ray_n_mask(25).clone();
 		b.iter(|| {
 			//black_box(bb.shift_e().shift_e().shift_e().shift_e().shift_e());
 			//black_box(bb.shift_e());
-			let x = bb.clone();
-			//x = black_box(x.shifted_e());
-			//x = black_box(x.shifted_e());
-			//x = black_box(x.shifted_e());
-			//x = black_box(x.shifted_e());
-			black_box(x.shifted_e());
+			let mut x = bb.clone();
+			x.shift_e_by(5);
 		})
 	});
 
 	group.finish();
 }
 //criterion_group!(benches, bench_alignment, bench_shift_integer, bench_shift_array);
-criterion_group!(benches, bench_shift_integer, bench_shift_array);
+criterion_group!(benches, bench_shift_array);
 criterion_main!(benches);

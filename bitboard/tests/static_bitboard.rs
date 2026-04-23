@@ -126,8 +126,8 @@ fn test_bitboard8x8() {
 	assert_eq!(Bitboard8x8::index_from_coords(0, 1), 8);
 	assert_eq!(Bitboard8x8ColMajor::H_OFFSET, 8);
 	assert_eq!(Bitboard8x8ColMajor::V_OFFSET, 1);
-	assert_eq!(Bitboard8x8ColMajor::DIAG_DEC_OFFSET, 9);
-	assert_eq!(Bitboard8x8ColMajor::DIAG_INC_OFFSET, 7);
+	assert_eq!(Bitboard8x8ColMajor::DIAG_DEC_OFFSET, 7);
+	assert_eq!(Bitboard8x8ColMajor::DIAG_INC_OFFSET, 9);
 	assert_eq!(Bitboard8x8::H_OFFSET, 1);
 	assert_eq!(Bitboard8x8::V_OFFSET, 8);
 	let test=Bitboard8x8::from_storage(1<<Bitboard8x8::index_from_coords(0, 1));
@@ -140,7 +140,7 @@ fn test_bitboard8x8() {
 	
 	let test=Bitboard8x8::SOUTH_BORDER;
 	let repr=format!("{:?}", test);
-	assert_eq!(repr, "bitboard::Bitboard8x8(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111)".to_string());
+	assert_eq!(repr, "static_bitboard::Bitboard8x8(0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111)".to_string());
 	assert_eq!(test.storage(), 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111);
 	
 	let test=Bitboard8x8::NORTH_BORDER;
@@ -183,7 +183,7 @@ fn test_bitboard8x8() {
 	println!("{}", test.ray_ne(44));
 	println!("{}", test.ray_nw(44));
 	println!("{}", test.ray_se(44));
-	println!("{}", test.ray_nw(44));
+	println!("{}", test.ray_sw(44));
 	println!("{}", test.ray_n(44));
 	println!("{}", test.ray_s(44));
 	println!("{}", test.ray_e(44));
@@ -204,8 +204,8 @@ fn test_bitboard7x7() {
 	assert_eq!(Bitboard7x7::index_from_coords(0, 1), 7);
 	assert_eq!(Bitboard7x7::H_OFFSET, 1);
 	assert_eq!(Bitboard7x7::V_OFFSET, 7);
-	assert_eq!(Bitboard7x7::DIAG_DEC_OFFSET, 8);
-	assert_eq!(Bitboard7x7::DIAG_INC_OFFSET, 6);
+	assert_eq!(Bitboard7x7::DIAG_DEC_OFFSET, 6);
+	assert_eq!(Bitboard7x7::DIAG_INC_OFFSET, 8);
 	let test=Bitboard7x7::from_storage(1<<Bitboard7x7::index_from_coords(0, 1));
 	
 	assert_eq!(test.storage(), 0b0000000_0000000_0000000_0000000_0000000_0000001_0000000);
@@ -216,7 +216,7 @@ fn test_bitboard7x7() {
 	
 	let test=Bitboard7x7::SOUTH_BORDER;
 	let repr=format!("{:?}", test);
-	assert_eq!(repr, "bitboard::Bitboard7x7(0b0000000_0000000_0000000_0000000_0000000_0000000_1111111)".to_string());
+	assert_eq!(repr, "static_bitboard::Bitboard7x7(0b0000000_0000000_0000000_0000000_0000000_0000000_1111111)".to_string());
 	assert_eq!(test.storage(), 0b0000000_0000000_0000000_0000000_0000000_0000000_1111111);
 	
 	let test=Bitboard7x7::NORTH_BORDER;
@@ -261,8 +261,8 @@ fn test_bitboard10x10() {
 	assert_eq!(Bitboard10x10::index_from_coords(0, 1), 10);
 	assert_eq!(Bitboard10x10::H_OFFSET, 1);
 	assert_eq!(Bitboard10x10::V_OFFSET, 10);
-	assert_eq!(Bitboard10x10::DIAG_DEC_OFFSET, 11);
-	assert_eq!(Bitboard10x10::DIAG_INC_OFFSET, 9);
+	assert_eq!(Bitboard10x10::DIAG_DEC_OFFSET, 9);
+	assert_eq!(Bitboard10x10::DIAG_INC_OFFSET, 11);
 
 	let test = Bitboard10x10::from_storage(1 << Bitboard10x10::index_from_coords(0, 1));
 	assert_eq!(test.storage(),
@@ -392,6 +392,10 @@ fn test_bitboard10x10() {
 	
 	let mut test = Bitboard10x10::EVEN_SQUARES;
 	test=test.shifted_e();
+	println!("{}", test);
+
+	let mut test = Bitboard10x10::EVEN_SQUARES;
+	test.shift_e_by(5);
 	println!("{}", test);
 	
 	

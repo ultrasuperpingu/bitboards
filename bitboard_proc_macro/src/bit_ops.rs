@@ -49,6 +49,7 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 		impl_const_bitwise!(#ident, BitXor, bitxor, xor_const, xor_assign_const, BitXorAssign, bitxor_assign, ^=);
 
 		impl #ident {
+			#[inline]
 			pub const fn not_const(&self) -> Self {
 				let mut i = 0;
 				let mut res = [0u64; Self::ARRAY_LEN];
@@ -58,6 +59,7 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				}
 				Self(res)
 			}
+			#[inline]
 			pub const fn not_assign_const(&mut self) {
 				let mut i = 0;
 				while i < self.0.len() {
@@ -75,6 +77,7 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 			}
 		}
 		impl #ident {
+			#[inline]
 			pub const fn shl_const(&self, rhs: usize) -> Self {
 				if rhs == 0 { return Self(self.0); }
 				let word_shift = rhs / u64::BITS as usize;
@@ -102,6 +105,7 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				}
 				Self(res)
 			}
+			//#[inline]
 			pub const fn shl_assign_const(&mut self, rhs: usize) {
 				if rhs == 0 { return; }
 
@@ -147,6 +151,7 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				}
 			}
 
+			#[inline]
 			pub const fn shr_const(&self, rhs: usize) -> Self {
 				if rhs == 0 { return Self(self.0); }
 				let word_shift = rhs / u64::BITS as usize;
@@ -174,6 +179,7 @@ pub(crate) fn bitboard_mask_array_impl(ident: &syn::Ident) -> proc_macro2::Token
 				}
 				Self(res)
 			}
+			//#[inline]
 			pub const fn shr_assign_const(&mut self, rhs: usize) {
 				if rhs == 0 { return; }
 
