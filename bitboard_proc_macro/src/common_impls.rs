@@ -496,14 +496,15 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				bb
 			}
 			/// Computes the bitboard mask the n north columns.
-			const fn compute_north_cols_mask(n: u8) -> Self {
+			pub const fn compute_north_cols_mask(n: u8) -> Self {
 				let mut bb = Self::empty();
 				let mut i=0;
 				while i < n as usize {
-					bb.or_assign_const(&Self::NORTH_BORDER.shr_const(i));
+					bb.or_assign_const(&Self::NORTH_BORDER.shr_const(Self::V_OFFSET * i));
 					i += 1;
 				}
 
+				bb.not_assign_const();
 				bb
 			}
 			/// Computes the bitboard mask the n south columns.
@@ -511,10 +512,11 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				let mut bb = Self::empty();
 				let mut i=0;
 				while i < n as usize {
-					bb.or_assign_const(&Self::SOUTH_BORDER.shl_const(i));
+					bb.or_assign_const(&Self::SOUTH_BORDER.shl_const(Self::V_OFFSET * i));
 					i += 1;
 				}
 
+				bb.not_assign_const();
 				bb
 			}
 			/// Computes the bitboard mask the n west columns.
@@ -522,10 +524,10 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				let mut bb = Self::empty();
 				let mut i=0;
 				while i < n as usize {
-					bb.or_assign_const(&Self::WEST_BORDER.shr_const(i));
+					bb.or_assign_const(&Self::WEST_BORDER.shl_const(Self::H_OFFSET * i));
 					i += 1;
 				}
-
+				bb.not_assign_const();
 				bb
 			}
 			/// Computes the bitboard mask the n east columns.
@@ -533,11 +535,40 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				let mut bb = Self::empty();
 				let mut i=0;
 				while i < n as usize {
-					bb.or_assign_const(&Self::EAST_BORDER.shl_const(i));
+					bb.or_assign_const(&Self::EAST_BORDER.shr_const(Self::H_OFFSET * i));
 					i += 1;
 				}
 
+				bb.not_assign_const();
 				bb
+			}
+			#[inline(always)]
+			pub fn shifted(&self, dx: i16, dy: i16) -> Self {
+				let mut res = self.clone_const();
+				res.shift(dx, dy);
+				res
+			}
+			#[inline(always)]
+			pub fn shift(&mut self, dx: i16, dy: i16) {
+				if Self::COL_MAJOR {
+					if dy > 0 {
+						self.and_assign_const(&Self::compute_north_cols_mask(dy as u8));
+					} else if dy < 0 {
+						self.and_assign_const(&Self::compute_south_cols_mask((-dy) as u8));
+					}
+				} else {
+					if dx > 0 {
+						self.and_assign_const(&Self::compute_east_cols_mask(dx as u8));
+					} else if dx < 0 {
+						self.and_assign_const(&Self::compute_west_cols_mask((-dx) as u8));
+					}
+				}
+				let delta = dx as isize * Self::H_OFFSET as isize + dy as isize * Self::V_OFFSET as isize;
+				if delta >= 0 {
+					self.shl_assign_const(delta as usize);
+				} else {
+					self.shr_assign_const((-delta) as usize);
+				}
 			}
 			
 			/// Shift bitboard one square north (up).
@@ -654,7 +685,11 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 			/// Shift bitboard n squares north-east.
 			#[inline(always)]
 			pub const fn shift_ne_by(&mut self, n: u8) {
-				self.and_assign_const(&Self::NO_WRAP_NE_MASK);
+				if Self::COL_MAJOR {
+					self.and_assign_const(&Self::compute_north_cols_mask(n));
+				} else {
+					self.and_assign_const(&Self::compute_east_cols_mask(n));
+				}
 				self.shl_assign_const(Self::NE_OFFSET as usize * n as usize);
 			}
 			/// Shifted bitboard one square north-east.
@@ -670,7 +705,21 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 				if Self::NW_OFFSET >= 0 {
 					self.shl_assign_const(Self::NW_OFFSET as usize);
 				} else {
-					self.shl_assign_const((-Self::NW_OFFSET) as usize);
+					self.shr_assign_const((-Self::NW_OFFSET) as usize);
+				}
+			}
+			/// Shift bitboard n squares north-west.
+			#[inline(always)]
+			pub const fn shift_nw_by(&mut self, n: u8) {
+				if Self::COL_MAJOR {
+					self.and_assign_const(&Self::compute_north_cols_mask(n));
+				} else {
+					self.and_assign_const(&Self::compute_west_cols_mask(n));
+				}
+				if Self::NW_OFFSET >= 0 {
+					self.shl_assign_const(Self::NW_OFFSET as usize * n as usize);
+				} else {
+					self.shr_assign_const((-Self::NW_OFFSET) as usize * n as usize);
 				}
 			}
 			/// Shifted bitboard one square north-west.
@@ -694,6 +743,21 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 					self.shr_assign_const((-Self::SE_OFFSET) as usize);
 				}
 			}
+			/// Shift bitboard n squares south-east.
+			#[inline(always)]
+			pub const fn shift_se_by(&mut self, n: u8) {
+				if Self::COL_MAJOR {
+					self.and_assign_const(&Self::compute_south_cols_mask(n));
+				} else {
+					self.and_assign_const(&Self::compute_east_cols_mask(n));
+				}
+				if Self::SE_OFFSET >= 0 {
+					self.shl_assign_const(Self::SE_OFFSET as usize * n as usize);
+				} else {
+					self.shr_assign_const(-Self::SE_OFFSET as usize * n as usize);
+				}
+				
+			}
 			/// Shifted bitboard one square south-east.
 			#[inline(always)]
 			pub const fn shifted_se(&self) -> Self {
@@ -709,6 +773,17 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 			pub const fn shift_sw(&mut self) {
 				self.and_assign_const(&Self::NO_WRAP_SW_MASK);
 				self.shr_assign_const((-Self::SW_OFFSET) as usize);
+			}
+			/// Shift bitboard n squares south-west.
+			#[inline(always)]
+			pub const fn shift_sw_by(&mut self, n: u8) {
+				if Self::COL_MAJOR {
+					self.and_assign_const(&Self::compute_south_cols_mask(n));
+				} else {
+					self.and_assign_const(&Self::compute_west_cols_mask(n));
+				}
+				self.shr_assign_const(-Self::SW_OFFSET as usize * n as usize);
+				
 			}
 			/// Shifted bitboard one square south-west.
 			#[inline(always)]
@@ -773,13 +848,14 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 					let lsb = mask.trailing_zeros();
 					mask &= mask - 1;
 
-					let mut i = current_nb_shift;
-					while i < lsb {
-						shifted.shift_e();
-						i += 1;
-						current_nb_shift+=1;
-					}
-
+					//let mut i = current_nb_shift;
+					//while i < lsb {
+					//	shifted.shift_e();
+					//	i += 1;
+					//	current_nb_shift+=1;
+					//}
+					shifted.shift_e_by((lsb- current_nb_shift) as u8);
+					current_nb_shift = lsb;
 					res.and_assign_const(&shifted);
 				}
 
@@ -794,12 +870,14 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 					let lsb = mask.trailing_zeros();
 					mask &= mask - 1;
 
-					let mut i = current_nb_shift;
-					while i < lsb {
-						shifted.shift_n();
-						i += 1;
-						current_nb_shift+=1;
-					}
+					//let mut i = current_nb_shift;
+					//while i < lsb {
+					//	shifted.shift_n();
+					//	i += 1;
+					//	current_nb_shift+=1;
+					//}
+					shifted.shift_n_by((lsb- current_nb_shift) as u8);
+					current_nb_shift = lsb;
 
 					res.and_assign_const(&shifted);
 				}
@@ -815,12 +893,14 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 					let lsb = mask.trailing_zeros();
 					mask &= mask - 1;
 
-					let mut i = current_nb_shift;
-					while i < lsb {
-						shifted.shift_ne();
-						i += 1;
-						current_nb_shift+=1;
-					}
+					//let mut i = current_nb_shift;
+					//while i < lsb {
+					//	shifted.shift_ne();
+					//	i += 1;
+					//	current_nb_shift+=1;
+					//}
+					shifted.shift_ne_by((lsb- current_nb_shift) as u8);
+					current_nb_shift = lsb;
 
 					res.and_assign_const(&shifted);
 				}
@@ -836,12 +916,14 @@ pub(crate) fn common_impl(ident: &syn::Ident, width_u8:u8, height_u8:u8, col_maj
 					let lsb = mask.trailing_zeros();
 					mask &= mask - 1;
 
-					let mut i = current_nb_shift;
-					while i < lsb {
-						shifted.shift_se();
-						i += 1;
-						current_nb_shift+=1;
-					}
+					//let mut i = current_nb_shift;
+					//while i < lsb {
+					//	shifted.shift_se();
+					//	i += 1;
+					//	current_nb_shift+=1;
+					//}
+					shifted.shift_se_by((lsb- current_nb_shift) as u8);
+					current_nb_shift = lsb;
 
 					res.and_assign_const(&shifted);
 				}
